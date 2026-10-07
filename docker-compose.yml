@@ -1,0 +1,16 @@
+# Optional: run PostgreSQL 16 in Docker instead of the embedded one.
+#   docker compose up -d
+# then create backend/.env with:  USE_EMBEDDED_DB=false
+services:
+  postgres:
+    image: postgres:16
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: gradconnect
+    ports:
+      - "5433:5432"
+    volumes:
+      - gradconnect-pg:/var/lib/postgresql/data
+volumes:
+  gradconnect-pg:

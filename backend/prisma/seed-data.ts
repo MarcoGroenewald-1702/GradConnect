@@ -1,0 +1,671 @@
+// Demo data for GradConnect. All companies, people and opportunities are fictional.
+
+export const skills = [
+  {
+    id: "csharp",
+    name: "C#",
+    category: "Languages",
+  },
+  {
+    id: "javascript",
+    name: "JavaScript",
+    category: "Languages",
+  },
+  {
+    id: "typescript",
+    name: "TypeScript",
+    category: "Languages",
+  },
+  {
+    id: "python",
+    name: "Python",
+    category: "Languages",
+  },
+  {
+    id: "java",
+    name: "Java",
+    category: "Languages",
+  },
+  {
+    id: "react",
+    name: "React",
+    category: "Frameworks",
+  },
+  {
+    id: "node",
+    name: "Node.js",
+    category: "Frameworks",
+  },
+  {
+    id: "dotnet",
+    name: ".NET Core",
+    category: "Frameworks",
+  },
+  {
+    id: "django",
+    name: "Django",
+    category: "Frameworks",
+  },
+  {
+    id: "sql",
+    name: "SQL",
+    category: "Data",
+  },
+  {
+    id: "postgres",
+    name: "PostgreSQL",
+    category: "Data",
+  },
+  {
+    id: "powerbi",
+    name: "Power BI",
+    category: "Data",
+  },
+  {
+    id: "azure",
+    name: "Azure",
+    category: "Cloud",
+  },
+  {
+    id: "aws",
+    name: "AWS",
+    category: "Cloud",
+  },
+  {
+    id: "docker",
+    name: "Docker",
+    category: "Cloud",
+  },
+  {
+    id: "git",
+    name: "Git",
+    category: "Tools",
+  },
+  {
+    id: "restapis",
+    name: "REST APIs",
+    category: "Tools",
+  },
+  {
+    id: "cybersecurity",
+    name: "Cybersecurity",
+    category: "Security",
+  },
+  {
+    id: "networking",
+    name: "Network Security",
+    category: "Security",
+  },
+];
+
+export const opportunities = [
+  {
+    id: "opp-1",
+    title: "Junior Software Developer",
+    company: "TechNova",
+    location: "Johannesburg, Gauteng",
+    workMode: "Hybrid",
+    type: "Job",
+    match: 92,
+    skills: ["React", "TypeScript", "Git"],
+    postedDate: "2 days ago",
+    experience: "Graduate",
+    salary: "R22 000 – R28 000 / month",
+    description:
+      "Join a product team building payment tooling used by thousands of South African merchants. You will pair with senior engineers, ship front-end features and grow into full-stack work.",
+    responsibilities: [
+      "Build and maintain React components in a TypeScript codebase",
+      "Work with designers to deliver accessible, responsive interfaces",
+      "Participate in code review and daily stand-ups",
+      "Write unit tests for the features you ship",
+    ],
+    requirements: [
+      "IT/Computer Science qualification completed in the last two years",
+      "Working knowledge of JavaScript or TypeScript",
+      "Familiarity with Git-based workflows",
+      "Strong written communication",
+    ],
+  },
+  {
+    id: "opp-2",
+    title: "Graduate .NET Developer",
+    company: "Sandton Digital",
+    location: "Sandton, Gauteng",
+    workMode: "On-site",
+    type: "Job",
+    match: 88,
+    skills: ["C#", ".NET Core", "SQL"],
+    postedDate: "4 days ago",
+    experience: "Graduate",
+    salary: "R20 000 – R26 000 / month",
+    description:
+      "A structured graduate programme for .NET developers supporting enterprise financial systems.",
+    responsibilities: [
+      "Develop APIs in .NET Core",
+      "Write and optimise SQL queries",
+      "Support production releases with a senior buddy",
+    ],
+    requirements: ["C# fundamentals", "Relational database knowledge", "Willingness to learn Azure"],
+  },
+  {
+    id: "opp-3",
+    title: "Data Analyst Internship",
+    company: "Cape Insight Analytics",
+    location: "Cape Town, Western Cape",
+    workMode: "Hybrid",
+    type: "Internship",
+    match: 76,
+    skills: ["SQL", "Python", "Power BI"],
+    postedDate: "1 week ago",
+    experience: "Entry level",
+    salary: "R12 000 / month stipend",
+    description:
+      "Twelve-month internship working with a small analytics team on retail and logistics dashboards.",
+    responsibilities: [
+      "Prepare and clean datasets",
+      "Build Power BI dashboards",
+      "Present weekly insights to stakeholders",
+    ],
+    requirements: ["SQL basics", "Comfort with spreadsheets", "Interest in data storytelling"],
+  },
+  {
+    id: "opp-4",
+    title: "Cloud Support Learnership",
+    company: "Kagiso Cloud Services",
+    location: "Pretoria, Gauteng",
+    workMode: "On-site",
+    type: "Learnership",
+    match: 71,
+    skills: ["Azure", "Networking", "Git"],
+    postedDate: "1 week ago",
+    experience: "Entry level",
+    salary: "R9 500 / month stipend",
+    description:
+      "A 12-month NQF-aligned learnership combining cloud certification study with supervised support work.",
+    responsibilities: [
+      "Handle tier-1 cloud support tickets",
+      "Study towards AZ-900 certification",
+      "Document runbooks",
+    ],
+    requirements: ["IT qualification", "Strong troubleshooting mindset", "Reliable attendance"],
+  },
+  {
+    id: "opp-5",
+    title: "Frontend Freelance Project — Booking Portal",
+    company: "Umoya Studio",
+    location: "Remote (South Africa)",
+    workMode: "Remote",
+    type: "Freelance Project",
+    match: 84,
+    skills: ["React", "TypeScript", "REST APIs"],
+    postedDate: "3 days ago",
+    experience: "1-2 years",
+    salary: "R35 000 project fee",
+    description:
+      "Six-week contract building the booking front-end for a tourism client. Design system and API are already in place.",
+    responsibilities: [
+      "Implement booking flows from Figma designs",
+      "Integrate an existing REST API",
+      "Deliver weekly demo builds",
+    ],
+    requirements: ["Portfolio of React work", "Own equipment and connectivity", "Available 20h/week"],
+  },
+  {
+    id: "opp-6",
+    title: "Junior Cybersecurity Analyst",
+    company: "Sentinel SA",
+    location: "Durban, KwaZulu-Natal",
+    workMode: "Hybrid",
+    type: "Job",
+    match: 64,
+    skills: ["Cybersecurity", "Network Security", "Python"],
+    postedDate: "5 days ago",
+    experience: "Graduate",
+    salary: "R24 000 / month",
+    description: "Monitor and triage security events in a growing SOC serving mid-market clients.",
+    responsibilities: ["Triage SIEM alerts", "Assist with incident reports", "Run phishing simulations"],
+    requirements: ["Security fundamentals", "Shift flexibility", "Analytical thinking"],
+  },
+];
+
+export const mentors = [
+  {
+    id: "m-1",
+    name: "Sipho Mokoena",
+    initials: "SM",
+    jobTitle: "Senior Software Engineer",
+    company: "Standard Systems",
+    years: 7,
+    specialisations: ["Backend", ".NET", "Cloud"],
+    languages: ["English", "isiZulu"],
+    rating: 4.9,
+    sessions: 128,
+    availability: "Weekday evenings",
+    bio: "I moved from a support desk into engineering and now lead a backend team. I help graduates build the fundamentals that interviews actually test: data modelling, APIs and clean code.",
+    slots: [
+      {
+        day: "Mon",
+        times: ["17:00", "18:00"],
+      },
+      {
+        day: "Wed",
+        times: ["17:30", "18:30", "19:30"],
+      },
+      {
+        day: "Sat",
+        times: ["09:00", "10:00"],
+      },
+    ],
+  },
+  {
+    id: "m-2",
+    name: "Aisha Patel",
+    initials: "AP",
+    jobTitle: "Frontend Lead",
+    company: "Umoya Studio",
+    years: 9,
+    specialisations: ["React", "TypeScript", "Accessibility"],
+    languages: ["English", "Afrikaans"],
+    rating: 4.8,
+    sessions: 94,
+    availability: "Tuesdays & Thursdays",
+    bio: "Frontend lead focused on design systems and accessibility. I review portfolios and help graduates turn class projects into interview-ready work.",
+    slots: [
+      {
+        day: "Tue",
+        times: ["16:00", "17:00", "18:00"],
+      },
+      {
+        day: "Thu",
+        times: ["16:00", "17:00"],
+      },
+    ],
+  },
+  {
+    id: "m-3",
+    name: "Johan van Wyk",
+    initials: "JW",
+    jobTitle: "Cloud Architect",
+    company: "Kagiso Cloud Services",
+    years: 12,
+    specialisations: ["Azure", "DevOps", "Architecture"],
+    languages: ["English", "Afrikaans"],
+    rating: 4.7,
+    sessions: 61,
+    availability: "Weekends",
+    bio: "I help graduates plan a certification path that employers respect, and explain how cloud teams really work day to day.",
+    slots: [
+      {
+        day: "Sat",
+        times: ["08:00", "09:00", "11:00"],
+      },
+      {
+        day: "Sun",
+        times: ["14:00", "15:00"],
+      },
+    ],
+  },
+  {
+    id: "m-4",
+    name: "Nomvula Dlamini",
+    initials: "ND",
+    jobTitle: "Data Engineering Manager",
+    company: "Cape Insight Analytics",
+    years: 10,
+    specialisations: ["Data", "SQL", "Python"],
+    languages: ["English", "isiXhosa"],
+    rating: 5,
+    sessions: 143,
+    availability: "Weekday lunchtimes",
+    bio: "Data leader who hires graduates every year. I coach on SQL depth, portfolio projects and how to talk about your work.",
+    slots: [
+      {
+        day: "Mon",
+        times: ["12:30", "13:00"],
+      },
+      {
+        day: "Fri",
+        times: ["12:30", "13:30"],
+      },
+    ],
+  },
+];
+
+export const learningModules = [
+  {
+    id: "l-react",
+    title: "React Fundamentals",
+    skill: "React",
+    track: "Web Development",
+    difficulty: "Intermediate",
+    minutes: 45,
+    progress: 68,
+    recommended: true,
+    description:
+      "Understand components, props, state and effects well enough to build and explain a real interface.",
+    objectives: [
+      "Describe how React renders and re-renders",
+      "Lift state and pass props deliberately",
+      "Use effects without common pitfalls",
+    ],
+    lessons: [
+      {
+        title: "Thinking in components",
+        minutes: 8,
+        done: true,
+      },
+      {
+        title: "Props and state",
+        minutes: 12,
+        done: true,
+      },
+      {
+        title: "Lists, keys and forms",
+        minutes: 10,
+        done: true,
+      },
+      {
+        title: "Effects and data fetching",
+        minutes: 9,
+        done: false,
+      },
+      {
+        title: "Composing a small feature",
+        minutes: 6,
+        done: false,
+      },
+    ],
+  },
+  {
+    id: "l-ts",
+    title: "TypeScript for JavaScript Developers",
+    skill: "TypeScript",
+    track: "Web Development",
+    difficulty: "Intermediate",
+    minutes: 60,
+    progress: 25,
+    recommended: true,
+    description: "Add types to an existing JavaScript codebase without fighting the compiler.",
+    objectives: ["Model data with interfaces", "Use unions and narrowing", "Read compiler errors calmly"],
+    lessons: [
+      {
+        title: "Why types help",
+        minutes: 10,
+        done: true,
+      },
+      {
+        title: "Interfaces and types",
+        minutes: 15,
+        done: false,
+      },
+      {
+        title: "Generics in practice",
+        minutes: 20,
+        done: false,
+      },
+      {
+        title: "Typing API responses",
+        minutes: 15,
+        done: false,
+      },
+    ],
+  },
+  {
+    id: "l-sql",
+    title: "SQL Query Optimisation",
+    skill: "SQL",
+    track: "Data",
+    difficulty: "Advanced",
+    minutes: 50,
+    progress: 0,
+    recommended: false,
+    description: "Read execution plans and make slow queries fast on real datasets.",
+    objectives: ["Read a query plan", "Choose useful indexes", "Avoid accidental table scans"],
+    lessons: [
+      {
+        title: "How the planner thinks",
+        minutes: 12,
+        done: false,
+      },
+      {
+        title: "Indexes that earn their keep",
+        minutes: 18,
+        done: false,
+      },
+      {
+        title: "Rewriting joins",
+        minutes: 20,
+        done: false,
+      },
+    ],
+  },
+  {
+    id: "l-azure",
+    title: "Azure Fundamentals Primer",
+    skill: "Azure",
+    track: "Cloud",
+    difficulty: "Beginner",
+    minutes: 40,
+    progress: 100,
+    recommended: false,
+    description: "The core Azure services and pricing concepts covered by AZ-900.",
+    objectives: ["Name core Azure services", "Explain regions and availability", "Estimate basic costs"],
+    lessons: [
+      {
+        title: "Cloud concepts",
+        minutes: 10,
+        done: true,
+      },
+      {
+        title: "Core services",
+        minutes: 15,
+        done: true,
+      },
+      {
+        title: "Cost and governance",
+        minutes: 15,
+        done: true,
+      },
+    ],
+  },
+  {
+    id: "l-sec",
+    title: "Secure Coding Essentials",
+    skill: "Cybersecurity",
+    track: "Cybersecurity",
+    difficulty: "Beginner",
+    minutes: 35,
+    progress: 0,
+    recommended: true,
+    description: "The OWASP issues that actually appear in graduate code reviews.",
+    objectives: ["Prevent injection", "Handle secrets safely", "Validate input properly"],
+    lessons: [
+      {
+        title: "Injection and validation",
+        minutes: 12,
+        done: false,
+      },
+      {
+        title: "Auth mistakes",
+        minutes: 11,
+        done: false,
+      },
+      {
+        title: "Secrets and config",
+        minutes: 12,
+        done: false,
+      },
+    ],
+  },
+  {
+    id: "l-git",
+    title: "Git Workflows for Teams",
+    skill: "Git",
+    track: "Web Development",
+    difficulty: "Beginner",
+    minutes: 30,
+    progress: 40,
+    recommended: false,
+    description: "Branching, reviews and resolving conflicts without panic.",
+    objectives: ["Use feature branches", "Write useful commits", "Resolve merge conflicts"],
+    lessons: [
+      {
+        title: "Branching basics",
+        minutes: 10,
+        done: true,
+      },
+      {
+        title: "Pull requests",
+        minutes: 10,
+        done: false,
+      },
+      {
+        title: "Conflicts and rebasing",
+        minutes: 10,
+        done: false,
+      },
+    ],
+  },
+];
+
+export const assessments = [
+  {
+    id: "a-javascript",
+    title: "JavaScript Skills Assessment",
+    skill: "JavaScript",
+    minutes: 15,
+    questions: [
+      {
+        prompt: "What does `Array.prototype.map` return?",
+        options: [
+          "The original array, mutated in place",
+          "A new array with the callback result for each element",
+          "The number of elements processed",
+          "undefined",
+        ],
+        answer: 1,
+      },
+      {
+        prompt: "Which statement about `const` is correct?",
+        options: [
+          "The binding cannot be reassigned, but object contents can change",
+          "The value is deeply immutable",
+          "It is function-scoped like `var`",
+          "It is hoisted and initialised as undefined",
+        ],
+        answer: 0,
+      },
+      {
+        prompt: "What is the result of `typeof null`?",
+        options: ["'null'", "'undefined'", "'object'", "'boolean'"],
+        answer: 2,
+      },
+      {
+        prompt: "Which best describes the event loop?",
+        options: [
+          "It runs callbacks in parallel on multiple threads",
+          "It processes the call stack, then queued tasks and microtasks",
+          "It blocks until all promises resolve",
+          "It is only available in Node.js",
+        ],
+        answer: 1,
+      },
+      {
+        prompt: "How do you safely copy a nested object?",
+        options: ["Object.assign({}, obj)", "{ ...obj }", "structuredClone(obj)", "obj.slice()"],
+        answer: 2,
+      },
+      {
+        prompt: "What does `async function` always return?",
+        options: ["A Promise", "The awaited value", "undefined", "A generator"],
+        answer: 0,
+      },
+    ],
+  },
+  {
+    id: "a-react",
+    title: "React Skills Assessment",
+    skill: "React",
+    minutes: 15,
+    questions: [
+      {
+        prompt: "Why do lists need stable keys?",
+        options: [
+          "For CSS styling",
+          "So React can match elements between renders",
+          "Keys are optional and ignored",
+          "To sort the list automatically",
+        ],
+        answer: 1,
+      },
+      {
+        prompt: "When does a `useEffect` with an empty dependency array run?",
+        options: ["On every render", "Only after the first render", "Never", "Only on unmount"],
+        answer: 1,
+      },
+      {
+        prompt: "What is lifting state up?",
+        options: [
+          "Storing state in localStorage",
+          "Moving shared state to the closest common ancestor",
+          "Using a global variable",
+          "Rendering state in a portal",
+        ],
+        answer: 1,
+      },
+      {
+        prompt: "Which is a valid reason to use `useMemo`?",
+        options: [
+          "To avoid an expensive recalculation on every render",
+          "To replace useState",
+          "To fetch data",
+          "To force re-renders",
+        ],
+        answer: 0,
+      },
+      {
+        prompt: "What is a controlled input?",
+        options: [
+          "An input whose value comes from React state",
+          "An input with a ref",
+          "A disabled input",
+          "An input inside a form element",
+        ],
+        answer: 0,
+      },
+    ],
+  },
+  {
+    id: "a-sql",
+    title: "SQL Skills Assessment",
+    skill: "SQL",
+    minutes: 15,
+    questions: [
+      {
+        prompt: "Which join returns only matching rows from both tables?",
+        options: ["LEFT JOIN", "INNER JOIN", "FULL OUTER JOIN", "CROSS JOIN"],
+        answer: 1,
+      },
+      {
+        prompt: "What does an index primarily improve?",
+        options: ["Insert speed", "Read/lookup speed", "Disk usage", "Backup speed"],
+        answer: 1,
+      },
+      {
+        prompt: "Which clause filters grouped results?",
+        options: ["WHERE", "HAVING", "ORDER BY", "LIMIT"],
+        answer: 1,
+      },
+      {
+        prompt: "What does a transaction guarantee?",
+        options: [
+          "Statements run faster",
+          "All statements commit or none do",
+          "Queries bypass indexes",
+          "Rows are cached",
+        ],
+        answer: 1,
+      },
+    ],
+  },
+];

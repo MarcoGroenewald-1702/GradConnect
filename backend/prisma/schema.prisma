@@ -1,0 +1,354 @@
+// GradConnect data model (PostgreSQL 16).
+// See section 3.4 "Data Model Overview" of the Project Plan and Design.
+
+generator client {
+  provider = "prisma-client"
+  output   = "../src/generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+enum Role {
+  graduate
+  employer
+  mentor
+  admin
+}
+
+enum EvidenceType {
+  assessment
+  project
+}
+
+enum ApplicationStatus {
+  submitted
+  under_review
+  interview
+  offer
+  rejected
+}
+
+enum ActivityKind {
+  verified
+  applied
+  learning
+  mentor
+}
+
+/// Single account record; base for all roles.
+model User {
+  id              String    @id @default(uuid())
+  email           String    @unique
+  passwordHash    String
+  firstName       String
+  lastName        String
+  role            Role      @default(graduate)
+  /// POPIA: when the user accepted the terms and consented to processing
+  termsAcceptedAt DateTime?
+  popiaConsentAt  DateTime?
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+
+  profile       Profile?
+  employer      Employer?
+  mentor        Mentor?
+  refreshTokens RefreshToken[]
+  activities    Activity[]
+  notifications Notification[]
+}
+
+/// Rotating refresh tokens. Only a SHA-256 hash of the token is stored.
+model RefreshToken {
+  id         String    @id @default(uuid())
+  userId     String
+  tokenHash  String    @unique
+  /// all tokens created from one login share a family; reuse of an old token revokes the family
+  familyId   String
+  expiresAt  DateTime
+  revokedAt  DateTime?
+  createdAt  DateTime  @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([familyId])
+}
+
+/// Graduate-specific profile, skills, education and portfolio.
+model Profile {
+  id             String   @id @default(uuid())
+  userId         String   @unique
+  headline       String?
+  bio            String?
+  location       String?
+  institution    String?
+  qualification  String?
+  graduationYear String?
+  careerInterest String?
+  targetRole     String?
+  githubUrl      String?
+  websiteUrl     String?
+  onboarded      Boolean  @default(false)
+  /// 0-100, calculated during onboarding
+  completeness   Int      @default(40)
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  user               User                @relation(fields: [userId], references: [id], onDelete: Cascade)
+  declaredSkills     ProfileSkill[]
+  skillsRecords      SkillsRecord[]
+  artefacts          ProjectArtefact[]
+  assessmentAttempts AssessmentAttempt[]
+  enrolments         ModuleEnrolment[]
+  mentorSessions     MentorSession[]
+  savedOpportunities SavedOpportunity[]
+  applications       Application[]
+}
+
+/// Skills taxonomy (Languages, Frameworks, Cloud, Data, Security, Tools).
+model Skill {
+  id       String @id
+  name     String @unique
+  category String
+
+  declaredBy  ProfileSkill[]
+  records     SkillsRecord[]
+  assessments Assessment[]
+}
+
+/// A skill the graduate says they have (self-declared).
+model ProfileSkill {
+  profileId  String
+  skillId    String
+  declaredAt DateTime @default(now())
+
+  profile Profile @relation(fields: [profileId], references: [id], onDelete: Cascade)
+  skill   Skill   @relation(fields: [skillId], references: [id])
+
+  @@id([profileId, skillId])
+}
+
+/// A verified skill, with the evidence that proved it.
+model SkillsRecord {
+  id           String       @id @default(uuid())
+  profileId    String
+  skillId      String
+  evidenceType EvidenceType
+  /// assessment score in percent (assessment evidence only)
+  score        Int?
+  attemptId    String?      @unique
+  artefactId   String?
+  /// SHA-256 of the record's contents, so later changes can be detected (tamper-evident)
+  evidenceHash String
+  verifiedAt   DateTime     @default(now())
+
+  profile  Profile            @relation(fields: [profileId], references: [id], onDelete: Cascade)
+  skill    Skill              @relation(fields: [skillId], references: [id])
+  attempt  AssessmentAttempt? @relation(fields: [attemptId], references: [id])
+  artefact ProjectArtefact?   @relation(fields: [artefactId], references: [id])
+
+  @@unique([profileId, skillId])
+}
+
+/// A project submitted as evidence (repository link, description, uploaded file name).
+model ProjectArtefact {
+  id          String   @id @default(uuid())
+  profileId   String
+  name        String
+  description String?
+  repoUrl     String?
+  fileName    String?
+  createdAt   DateTime @default(now())
+
+  profile       Profile        @relation(fields: [profileId], references: [id], onDelete: Cascade)
+  skillsRecords SkillsRecord[]
+}
+
+/// Skill assessment definition. Questions are stored as JSONB.
+model Assessment {
+  id        String @id
+  skillId   String
+  title     String
+  minutes   Int
+  passMark  Int    @default(60)
+  /// [{ prompt, options: string[], answer: number }]
+  questions Json
+
+  skill    Skill               @relation(fields: [skillId], references: [id])
+  attempts AssessmentAttempt[]
+}
+
+model AssessmentAttempt {
+  id           String    @id @default(uuid())
+  assessmentId String
+  profileId    String
+  score        Int?
+  passed       Boolean?
+  startedAt    DateTime  @default(now())
+  submittedAt  DateTime?
+
+  assessment   Assessment    @relation(fields: [assessmentId], references: [id])
+  profile      Profile       @relation(fields: [profileId], references: [id], onDelete: Cascade)
+  skillsRecord SkillsRecord?
+
+  @@index([profileId])
+}
+
+/// Micro-learning unit.
+model LearningModule {
+  id          String @id
+  title       String
+  skill       String
+  track       String
+  difficulty  String
+  minutes     Int
+  description String
+  objectives  String[]
+  /// [{ title, minutes }]
+  lessons     Json
+
+  enrolments ModuleEnrolment[]
+}
+
+model ModuleEnrolment {
+  profileId   String
+  moduleId    String
+  /// 0-100
+  progress    Int       @default(0)
+  enrolledAt  DateTime  @default(now())
+  completedAt DateTime?
+
+  profile Profile        @relation(fields: [profileId], references: [id], onDelete: Cascade)
+  module  LearningModule @relation(fields: [moduleId], references: [id])
+
+  @@id([profileId, moduleId])
+}
+
+/// Mentor profile, availability and specialisations.
+model Mentor {
+  id              String   @id
+  userId          String?  @unique
+  name            String
+  initials        String
+  jobTitle        String
+  company         String
+  years           Int
+  rating          Float
+  sessionsCount   Int      @default(0)
+  availability    String
+  bio             String
+  specialisations String[]
+  languages       String[]
+  /// [{ day, times: string[] }]
+  slots           Json
+
+  user     User?           @relation(fields: [userId], references: [id], onDelete: SetNull)
+  sessions MentorSession[]
+}
+
+model MentorSession {
+  id        String   @id @default(uuid())
+  mentorId  String
+  profileId String
+  topic     String
+  goal      String?
+  question  String?
+  day       String
+  time      String
+  createdAt DateTime @default(now())
+
+  mentor  Mentor  @relation(fields: [mentorId], references: [id])
+  profile Profile @relation(fields: [profileId], references: [id], onDelete: Cascade)
+
+  @@index([profileId])
+}
+
+/// A company that posts opportunities.
+model Employer {
+  id       String  @id @default(uuid())
+  userId   String? @unique
+  name     String  @unique
+  industry String?
+
+  user          User?         @relation(fields: [userId], references: [id], onDelete: SetNull)
+  opportunities Opportunity[]
+}
+
+/// Job, internship, learnership or project posting.
+model Opportunity {
+  id               String   @id
+  employerId       String
+  title            String
+  type             String
+  location         String
+  workMode         String
+  experience       String
+  salary           String
+  description      String
+  skills           String[]
+  responsibilities String[]
+  requirements     String[]
+  postedAt         DateTime @default(now())
+
+  employer     Employer           @relation(fields: [employerId], references: [id])
+  applications Application[]
+  savedBy      SavedOpportunity[]
+}
+
+model SavedOpportunity {
+  profileId     String
+  opportunityId String
+  savedAt       DateTime @default(now())
+
+  profile     Profile     @relation(fields: [profileId], references: [id], onDelete: Cascade)
+  opportunity Opportunity @relation(fields: [opportunityId], references: [id], onDelete: Cascade)
+
+  @@id([profileId, opportunityId])
+}
+
+/// Graduate application to an Opportunity, with a frozen copy of the profile (JSONB).
+model Application {
+  id              String            @id @default(uuid())
+  profileId       String
+  opportunityId   String
+  status          ApplicationStatus @default(submitted)
+  coverNote       String?
+  /// profile as it was when the graduate applied (for auditability)
+  profileSnapshot Json
+  appliedAt       DateTime          @default(now())
+
+  profile     Profile     @relation(fields: [profileId], references: [id], onDelete: Cascade)
+  opportunity Opportunity @relation(fields: [opportunityId], references: [id])
+
+  @@unique([profileId, opportunityId])
+}
+
+/// "Recent activity" feed on the dashboard.
+model Activity {
+  id        String       @id @default(uuid())
+  userId    String
+  label     String
+  detail    String
+  kind      ActivityKind
+  createdAt DateTime     @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, createdAt])
+}
+
+model Notification {
+  id        String    @id @default(uuid())
+  userId    String
+  title     String
+  body      String
+  kind      String
+  readAt    DateTime?
+  createdAt DateTime  @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, createdAt])
+}
