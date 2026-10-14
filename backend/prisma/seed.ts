@@ -9,6 +9,7 @@
 import { hash } from "@node-rs/argon2";
 import { prisma } from "../src/db";
 import type { ApplicationStatus } from "../src/generated/prisma/client";
+import { nextDateFor } from "../src/lib/dates";
 import { evidenceHash } from "../src/services/scoring";
 import { extraAssessments, lessonContent } from "./catalog-content";
 import { assessments as baseAssessments, learningModules, mentors, opportunities, skills } from "./seed-data";
@@ -72,8 +73,17 @@ async function syncCatalogue() {
     };
     await prisma.mentor.upsert({ where: { id: m.id }, update: data, create: { id: m.id, sessionsCount: m.sessions, ...data } });
   }
+  const industries: Record<string, string> = {
+    TechNova: "Fintech",
+    "Sandton Digital": "Financial services",
+    "Cape Insight Analytics": "Data & analytics",
+    "Kagiso Cloud Services": "Cloud services",
+    "Umoya Studio": "Digital agency",
+    "Sentinel SA": "Cybersecurity",
+  };
   for (const name of [...new Set(opportunities.map((o) => o.company))]) {
-    await prisma.employer.upsert({ where: { name }, update: {}, create: { name } });
+    await prisma.employer.upsert({ where: { name }, update: {}, create: { name, industry: industries[name] } });
+    await prisma.employer.updateMany({ where: { name, industry: null }, data: { industry: industries[name] } });
   }
   const employers = await prisma.employer.findMany();
   const employerId = new Map(employers.map((e) => [e.name, e.id]));
@@ -98,6 +108,7 @@ async function syncCatalogue() {
 async function main() {
   await syncCatalogue();
   if ((await prisma.user.count()) > 0) {
+    await addDemoCandidates();
     console.log("[seed] Catalogue up to date. Demo accounts already exist, not changing them.");
     return;
   }
@@ -127,6 +138,7 @@ async function main() {
           websiteUrl: "thandi.dev",
           onboarded: true,
           completeness: 80,
+          visibleToEmployers: true,
         },
       },
     },
@@ -182,7 +194,7 @@ async function main() {
 
   // ----- Mentor session, applications, activity, notifications -----
   await prisma.mentorSession.create({
-    data: { mentorId: "m-2", profileId, topic: "React", goal: "Portfolio review before applications", day: "Thu", time: "17:00" },
+    data: { mentorId: "m-2", profileId, topic: "React", goal: "Portfolio review before applications", day: "Thu", time: "17:00", date: nextDateFor("Thu", "17:00") },
   });
 
   const snapshot = {
@@ -220,6 +232,7 @@ async function main() {
     ],
   });
 
+  await addDemoCandidates();
   console.log("[seed] Done. Log in as thandi.nkosi@example.co.za / password123");
 }
 
@@ -229,3 +242,163 @@ main()
     process.exitCode = 1;
   })
   .finally(() => prisma.$disconnect());
+
+// ---------------------------------------------------------------------------
+// Extra demo graduates (visible to employers), their applications to TechNova,
+// and session requests for Sipho. Added once; skipped if their emails exist.
+// ---------------------------------------------------------------------------
+const demoCandidates = [
+  {
+    email: "kabelo.mahlangu@example.co.za",
+    firstName: "Kabelo",
+    lastName: "Mahlangu",
+    headline: "IT Diploma Graduate · Data Analytics",
+    institution: "Tshwane University of Technology",
+    qualification: "Diploma in Information Technology",
+    graduationYear: "2024",
+    location: "Pretoria, Gauteng",
+    careerInterest: "Data Analytics",
+    githubUrl: "github.com/kabelom",
+    verified: [
+      { skillId: "sql", score: 81 },
+      { skillId: "python", project: { name: "Retail Churn Model", description: "Logistic regression on anonymised retail data." } },
+    ],
+    declared: ["powerbi", "azure", "react"],
+    applyTo: [["opp-1", "submitted", 2, "I build dashboards in React and love working with data."]],
+    session: { mentorId: "m-1", day: "Mon", time: "17:00", topic: "Career advice", goal: "Moving from analytics into software development", status: "requested" },
+  },
+  {
+    email: "rethabile.molefe@example.co.za",
+    firstName: "Rethabile",
+    lastName: "Molefe",
+    headline: "BTech IT Graduate · Cloud & DevOps",
+    institution: "Cape Peninsula University of Technology",
+    qualification: "BTech Information Technology",
+    graduationYear: "2025",
+    location: "Cape Town, Western Cape",
+    careerInterest: "Cloud & DevOps",
+    githubUrl: "github.com/rethabilem",
+    verified: [
+      { skillId: "azure", score: 88 },
+      { skillId: "docker", project: { name: "CI/CD Pipeline Lab", description: "GitHub Actions pipeline deploying to Azure App Service." } },
+      { skillId: "git", score: 90 },
+    ],
+    declared: ["node", "typescript"],
+    applyTo: [["opp-1", "under_review", 5, null]],
+    session: { mentorId: "m-1", day: "Wed", time: "18:30", topic: "Cloud", goal: "Plan my AZ-104 certification path", status: "completed", daysAgo: 6 },
+  },
+  {
+    email: "yusuf.adams@example.co.za",
+    firstName: "Yusuf",
+    lastName: "Adams",
+    headline: "BSc Computer Science · Cybersecurity",
+    institution: "Durban University of Technology",
+    qualification: "BSc Computer Science",
+    graduationYear: "2024",
+    location: "Durban, KwaZulu-Natal",
+    careerInterest: "Cybersecurity",
+    githubUrl: null,
+    verified: [{ skillId: "networking", project: { name: "Home SOC Lab", description: "Wazuh + ELK detection lab with documented playbooks." } }],
+    declared: ["python", "cybersecurity", "git"],
+    applyTo: [["opp-1", "submitted", 1, null]],
+    session: null,
+  },
+] as const;
+
+async function addDemoCandidates() {
+  const passwordHash = await hash("password123");
+  const consent = daysAgo(60);
+  for (const c of demoCandidates) {
+    if (await prisma.user.findUnique({ where: { email: c.email } })) continue;
+    const user = await prisma.user.create({
+      data: {
+        email: c.email,
+        passwordHash,
+        firstName: c.firstName,
+        lastName: c.lastName,
+        role: "graduate",
+        termsAcceptedAt: consent,
+        popiaConsentAt: consent,
+        profile: {
+          create: {
+            headline: c.headline,
+            institution: c.institution,
+            qualification: c.qualification,
+            graduationYear: c.graduationYear,
+            location: c.location,
+            careerInterest: c.careerInterest,
+            githubUrl: c.githubUrl,
+            onboarded: true,
+            completeness: 88,
+            visibleToEmployers: true,
+          },
+        },
+      },
+      include: { profile: true },
+    });
+    const profileId = user.profile!.id;
+    const skillIds = [...c.verified.map((v) => v.skillId), ...c.declared];
+    await prisma.profileSkill.createMany({ data: skillIds.map((skillId) => ({ profileId, skillId })), skipDuplicates: true });
+
+    for (const [i, v] of c.verified.entries()) {
+      const verifiedAt = daysAgo(30 + i * 7);
+      if ("project" in v) {
+        const artefact = await prisma.projectArtefact.create({
+          data: { profileId, name: v.project.name, description: v.project.description, createdAt: verifiedAt },
+        });
+        const record = { profileId, skillId: v.skillId, evidenceType: "project" as const, artefactId: artefact.id, verifiedAt };
+        await prisma.skillsRecord.create({ data: { ...record, evidenceHash: evidenceHash(record) } });
+      } else {
+        const record = { profileId, skillId: v.skillId, evidenceType: "assessment" as const, score: v.score, verifiedAt };
+        await prisma.skillsRecord.create({ data: { ...record, evidenceHash: evidenceHash(record) } });
+      }
+    }
+
+    for (const [opportunityId, status, ago, coverNote] of c.applyTo) {
+      const opp = await prisma.opportunity.findUnique({ where: { id: opportunityId } });
+      if (!opp) continue;
+      await prisma.application.create({
+        data: {
+          profileId,
+          opportunityId,
+          status: status as ApplicationStatus,
+          coverNote,
+          appliedAt: daysAgo(ago),
+          profileSnapshot: {
+            name: `${c.firstName} ${c.lastName}`,
+            email: c.email,
+            headline: c.headline,
+            location: c.location,
+            institution: c.institution,
+            qualification: c.qualification,
+            graduationYear: c.graduationYear,
+            verifiedSkills: c.verified.map((v) => skills.find((s) => s.id === v.skillId)?.name ?? v.skillId),
+            declaredSkills: c.declared.map((d) => skills.find((s) => s.id === d)?.name ?? d),
+          },
+        },
+      });
+    }
+
+    const s = c.session;
+    if (s) {
+      const date =
+        s.status === "completed" ? daysAgo(s.daysAgo).toISOString().slice(0, 10) : nextDateFor(s.day, s.time);
+      const taken = await prisma.mentorSession.findUnique({ where: { mentorId_date_time: { mentorId: s.mentorId, date, time: s.time } } });
+      if (!taken) {
+        await prisma.mentorSession.create({
+          data: {
+            mentorId: s.mentorId,
+            profileId,
+            day: s.day,
+            time: s.time,
+            date,
+            topic: s.topic,
+            goal: s.goal,
+            status: s.status,
+            mentorNote: s.status === "completed" ? "Mapped out AZ-104 study plan; follow up in a month." : null,
+          },
+        });
+      }
+    }
+  }
+}

@@ -38,7 +38,7 @@ All use the password **password123**:
 
 | Role | Email |
 | --- | --- |
-| Graduate | thandi.nkosi@example.co.za |
+| Graduate | thandi.nkosi@example.co.za (also kabelo.mahlangu@, rethabile.molefe@, yusuf.adams@example.co.za) |
 | Employer | lerato@technova.example |
 | Mentor | sipho@example.co.za |
 | Admin | admin@gradconnect.example |
@@ -74,7 +74,6 @@ then create `backend/.env` with `USE_EMBEDDED_DB=false` and your `DATABASE_URL`.
   tamper-evident **SkillsRecord** (SHA-256 evidence hash).
 - **Profile** page with edit, skills, projects, verification history and portfolio links.
 - **POPIA rights:** `GET /api/me/export` (download your data) and `DELETE /api/me` (delete your account).
-- Notifications count on the bell icon.
 - **Assessments** (sprint S4): timed, auto-graded multiple-choice tests (7 skills). Questions are sent without
   answers and graded on the server; a large timer turns amber at 30 seconds and red at 10 seconds and submits
   automatically at 00:00. Passing creates a verified SkillsRecord linked to the attempt. Retakes are allowed;
@@ -84,10 +83,25 @@ then create `backend/.env` with `USE_EMBEDDED_DB=false` and your `DATABASE_URL`.
   the readiness score; finishing a module links to the matching assessment.
 - **Mentors** (sprint S6): mentor directory with search and specialisation filters, weekly availability grid,
   booking form (topic, goal, optional question), "Add to calendar" (.ics) download, and cancelling. A database
-  unique rule stops two graduates booking the same slot.
-
-**Not built yet** (they show the 404 page): Opportunities, Applications, Notifications and Settings pages,
-and the employer, mentor and admin dashboards.
+  unique rule stops two graduates booking the same slot. Sessions have a real date and a status: mentors with
+  an account must **accept** a request first; the graduate is notified at each step.
+- **Opportunities:** search, type / work-mode / saved filters, sort by match. The **detail page** compares each
+  required skill with yours (verified / self-declared / missing) with a "Verify now" link, and shows the employer.
+- **Applications:** status of every application with filters; withdraw while Submitted or Under Review.
+- **Notifications** (all roles): mark one or all as read.
+- **Settings** (all roles): change name and password (signs out other devices), employer visibility, POPIA
+  data export and account deletion.
+- **Employer:** dashboard with stats and recent applications; post / edit / close / reopen / delete
+  opportunities (skills picked from the catalogue so match scores work); review applicants with their profile
+  snapshot and match, and move them through Submitted → Under Review → Interview → Offer / Rejected (the
+  graduate is notified); **candidate search** by skills, location, graduation year and "verified only", with
+  verified and self-declared skills always shown separately; **shortlist** with private notes.
+- **Mentor:** dashboard with session requests (accept / decline with a reason), upcoming sessions (mark
+  completed with a note for the mentee), weekly availability and profile editor, and a mentees page with history.
+- **Admin:** read-only platform overview (users by role, verified skills, assessment pass rates, applications
+  and sessions by status, learning) and a searchable users list.
+- **POPIA visibility:** graduates are hidden from employer search unless they opt in (onboarding, Profile or
+  Settings). Employers can still see the snapshot of someone who applied to them.
 
 From the design that is planned for later phases (section 3.2–3.3): Redis cache/queue, S3/MinIO file storage
 (only the artefact's file name is stored today), background workers, Docker deployment to AWS/Azure.
@@ -115,7 +129,7 @@ From the design that is planned for later phases (section 3.2–3.3): Redis cach
 | CSRF protection | Refresh cookie is `SameSite=Strict` + required `X-Requested-With` header |
 | Argon2id passwords | `@node-rs/argon2` |
 | Short-lived access tokens, rotated revocable refresh tokens | `services/tokens.ts`, `RefreshToken` table |
-| Role-based access control at middleware level | `requireRole("graduate")` in `routes/graduate.routes.ts` |
+| Role-based access control at middleware level | `requireRole(...)` in `routes/graduate.routes.ts` and `routes/roles.routes.ts` (employer / mentor / admin) |
 | Security headers | `helmet` |
 
 ## API endpoints
@@ -138,7 +152,8 @@ From the design that is planned for later phases (section 3.2–3.3): Redis cach
 | GET | `/api/opportunities/:id` | One opportunity |
 | POST | `/api/opportunities/:id/save` | Save / un-save |
 | POST | `/api/opportunities/:id/apply` | Apply (stores a profile snapshot) |
-| GET | `/api/applications` | My applications |
+| GET | `/api/applications` · DELETE `/api/applications/:id` | My applications / withdraw one |
+| PUT | `/api/profile/visibility` | Let employers find my profile (or not) |
 | GET | `/api/dashboard` | Everything the dashboard shows |
 | GET | `/api/assessments` | Assessments with my status and best score |
 | POST | `/api/assessments/:id/start` | Start (or resume) a timed attempt; questions without answers |
@@ -150,7 +165,22 @@ From the design that is planned for later phases (section 3.2–3.3): Redis cach
 | POST | `/api/mentors/:id/book` | Book a session |
 | GET | `/api/sessions` · DELETE `/api/sessions/:id` | My sessions / cancel one |
 | GET | `/api/notifications` · `/unread-count` | Notifications |
-| POST | `/api/notifications/read-all` | Mark all as read |
+| POST | `/api/notifications/:id/read` · `/read-all` | Mark one / all as read |
+| PUT | `/api/me` | Change my name |
+| POST | `/api/auth/password` | Change my password (revokes other sessions) |
+| GET | `/api/employer/overview` | Employer dashboard |
+| GET / POST | `/api/employer/opportunities` | My opportunities / post one |
+| PUT / DELETE | `/api/employer/opportunities/:id` | Edit / delete (only without applications) |
+| POST | `/api/employer/opportunities/:id/open` · `/close` | Open or close applications |
+| GET | `/api/employer/opportunities/:id/applicants` | Applicants with snapshot and match |
+| PUT | `/api/employer/applications/:id/status` | Change an application's status |
+| GET | `/api/employer/candidates?skills=&location=&graduationYear=&verifiedOnly=` | Candidate search |
+| GET | `/api/employer/candidates/:profileId` | One candidate |
+| GET / POST / DELETE | `/api/employer/shortlist` (`/:profileId`) | Shortlist |
+| GET | `/api/mentor/overview` | Mentor dashboard (requests, upcoming, completed) |
+| POST | `/api/mentor/sessions/:id/accept` · `/decline` · `/complete` | Handle a session |
+| GET / PUT | `/api/mentor/profile` | Mentor profile and weekly slots |
+| GET | `/api/admin/overview` · `/api/admin/users?role=` | Admin numbers / users |
 | GET | `/api/me/export` | POPIA: download all my data |
 | DELETE | `/api/me` | POPIA: delete my account (password required) |
 | GET | `/api/health` | Server check |
@@ -161,7 +191,7 @@ Errors are JSON, e.g. `401 {"error": "Incorrect email or password."}`.
 
 `User` · `Profile` · `Skill` · `ProfileSkill` (self-declared) · `SkillsRecord` (verified, with evidence) ·
 `ProjectArtefact` · `Assessment` · `AssessmentAttempt` · `LearningModule` · `ModuleEnrolment` · `Mentor` ·
-`MentorSession` · `Employer` · `Opportunity` · `SavedOpportunity` · `Application` (with `profileSnapshot` JSONB) ·
+`MentorSession` · `Employer` · `Opportunity` · `SavedOpportunity` · `Application` (with `profileSnapshot` JSONB) · `Shortlist` ·
 `Activity` · `Notification` · `RefreshToken`.
 
 See `backend/prisma/schema.prisma` (every model is commented) and the SQL in `backend/prisma/migrations/`.
@@ -178,7 +208,7 @@ backend/
   scripts/embedded-db.ts     starts PostgreSQL 16 without installing it
   src/server.ts              starts the API
   src/app.ts                 Express app: security middleware + routes
-  src/routes/                URL -> handler (auth, graduate, growth = assessments/learn/mentors, common)
+  src/routes/                URL -> handler (auth, graduate, growth = assessments/learn/mentors, roles = employer/mentor/admin, common)
   src/services/              business logic (auth, tokens, scoring, profile, skills, opportunities ...)
   src/middleware/            auth (JWT + roles), Zod validation, rate limits, CSRF, errors
   tests/                     Vitest unit tests
@@ -187,7 +217,9 @@ src/                         React frontend
   lib/queries.ts             TanStack Query hooks
   lib/store.tsx              who is logged in
   components/ui/             shadcn/ui components (Radix)
-  pages/                     one file per page
+  components/                AppShell (sidebar per role), shared cards, dialogs and panels
+  pages/                     one file per page (graduate pages at the top level)
+  pages/employer/ mentor/ admin/   pages for the other roles (loaded on demand)
 .github/workflows/ci.yml     CI: type-check, tests, build on every push
 docker-compose.yml           optional PostgreSQL 16 in Docker
 ```

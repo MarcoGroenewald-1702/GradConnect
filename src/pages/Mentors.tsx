@@ -17,7 +17,7 @@ import {
 import { Input } from "@/components/ui/input";
 import { useCancelSession, useMentors, useSessions } from "@/lib/queries";
 import type { BookedSession } from "@/lib/types";
-import { nextSessionLabel } from "@/lib/sessions";
+import { sessionLabel } from "@/lib/sessions";
 import { cn } from "@/lib/utils";
 
 function MySessions() {
@@ -25,12 +25,16 @@ function MySessions() {
   const cancel = useCancelSession();
   const [cancelling, setCancelling] = useState<BookedSession | null>(null);
 
-  if (!sessions || sessions.length === 0) return null;
+  const today = new Date().toLocaleDateString("en-CA", { timeZone: "Africa/Johannesburg" });
+  const upcoming = (sessions ?? []).filter((s) => s.status !== "completed" && s.date >= today);
+  const past = (sessions ?? []).filter((s) => s.status === "completed");
+  if (upcoming.length === 0 && past.length === 0) return null;
   return (
     <section className="surface-panel p-6">
-      <h2 className="text-base font-semibold text-foreground">Your booked sessions</h2>
+      <h2 className="text-base font-semibold text-foreground">Your sessions</h2>
+      {upcoming.length === 0 && <p className="mt-3 text-sm text-muted-foreground">No upcoming sessions.</p>}
       <ul className="mt-4 grid gap-3 md:grid-cols-2">
-        {sessions.map((s) => (
+        {upcoming.map((s) => (
           <li key={s.id} className="flex items-start gap-3 rounded-xl border border-border bg-surface p-4">
             <span className="flex size-10 shrink-0 items-center justify-center rounded-full bg-primary text-xs font-semibold text-primary-foreground">
               {s.mentorInitials}
@@ -38,8 +42,16 @@ function MySessions() {
             <div className="min-w-0 flex-1">
               <p className="text-sm font-semibold text-foreground">{s.mentorName}</p>
               <p className="inline-flex items-center gap-1 text-xs font-medium text-action">
-                <CalendarClock className="size-3.5" aria-hidden /> {nextSessionLabel(s.day, s.time)} · {s.topic}
+                <CalendarClock className="size-3.5" aria-hidden /> {sessionLabel(s.date, s.time)} · {s.topic}
               </p>
+              <span
+                className={cn(
+                  "mt-1 inline-block rounded-full px-2 py-0.5 text-[11px] font-semibold",
+                  s.status === "requested" ? "bg-warning-soft text-warning-foreground" : "bg-success-soft text-success",
+                )}
+              >
+                {s.status === "requested" ? "Waiting for the mentor to accept" : "Confirmed"}
+              </span>
               {s.goal && <p className="mt-1 text-xs text-muted-foreground">Goal: {s.goal}</p>}
             </div>
             <Button variant="ghost" size="icon" aria-label={`Cancel session with ${s.mentorName}`} onClick={() => setCancelling(s)}>
@@ -48,13 +60,18 @@ function MySessions() {
           </li>
         ))}
       </ul>
+      {past.length > 0 && (
+        <p className="mt-4 text-xs text-muted-foreground">
+          Completed: {past.map((s) => `${s.mentorName} (${sessionLabel(s.date, s.time)})`).join(" · ")}
+        </p>
+      )}
 
       <Dialog open={!!cancelling} onOpenChange={(open) => !open && setCancelling(null)}>
         <DialogContent>
           <DialogHeader>
             <DialogTitle>Cancel this session?</DialogTitle>
             <DialogDescription>
-              {cancelling?.mentorName}, {cancelling?.day} at {cancelling?.time}. The slot will become available to other
+              {cancelling?.mentorName}, {cancelling && sessionLabel(cancelling.date, cancelling.time)}. The slot will become available to other
               graduates.
             </DialogDescription>
           </DialogHeader>

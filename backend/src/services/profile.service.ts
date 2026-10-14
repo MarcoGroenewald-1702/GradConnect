@@ -118,6 +118,7 @@ export async function completeOnboarding(userId: string, data: z.output<typeof o
         targetRole: data.targetRole,
         githubUrl: data.githubUrl,
         websiteUrl: data.websiteUrl,
+        visibleToEmployers: data.visibleToEmployers,
         onboarded: true,
         completeness,
       },
@@ -127,5 +128,12 @@ export async function completeOnboarding(userId: string, data: z.output<typeof o
       skipDuplicates: true,
     }),
   ]);
+  return getUserDto(userId);
+}
+
+/** POPIA: the graduate decides whether employers can find their profile. */
+export async function setVisibility(userId: string, visibleToEmployers: boolean) {
+  const profile = await getProfileOrThrow(userId);
+  await prisma.profile.update({ where: { id: profile.id }, data: { visibleToEmployers } });
   return getUserDto(userId);
 }

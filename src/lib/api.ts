@@ -5,7 +5,11 @@
 //  - a long-lived refresh token in an httpOnly cookie (JavaScript can't read it). When the access
 //    token expires we call /api/auth/refresh, which rotates the cookie and returns a new access token.
 import type {
+  AccountUpdateInput,
   ApplyInput,
+  ChangePasswordInput,
+  MentorProfileInput,
+  OpportunityInput,
   BookSessionInput,
   SubmitAssessmentInput,
   LoginInput,
@@ -15,6 +19,20 @@ import type {
   RegisterInput,
 } from "@shared/schemas";
 import type {
+  AdminOverview,
+  AdminUser,
+  Applicant,
+  ApplicationStatusKey,
+  CandidateDetail,
+  CandidateSummary,
+  EmployerOpportunity,
+  EmployerOverview,
+  MentorOverview,
+  MentorProfile,
+  Notification,
+  OpportunityDetail,
+  Role,
+  ShortlistEntry,
   Application,
   AssessmentAttempt,
   AssessmentResult,
@@ -142,10 +160,12 @@ export const api = {
 
   // Opportunities
   opportunities: () => request<Opportunity[]>("GET", "/opportunities"),
-  opportunity: (id: string) => request<Opportunity>("GET", `/opportunities/${id}`),
+  opportunity: (id: string) => request<OpportunityDetail>("GET", `/opportunities/${id}`),
   toggleSaved: (id: string) => request<{ saved: boolean }>("POST", `/opportunities/${id}/save`),
   apply: (id: string, input: ApplyInput) => request<Application>("POST", `/opportunities/${id}/apply`, input),
   applications: () => request<Application[]>("GET", "/applications"),
+  withdrawApplication: (id: string) => request<void>("DELETE", `/applications/${id}`),
+  setVisibility: (visibleToEmployers: boolean) => request<User>("PUT", "/profile/visibility", { visibleToEmployers }),
 
   // Assessments
   assessments: () => request<AssessmentSummary[]>("GET", "/assessments"),
@@ -170,6 +190,60 @@ export const api = {
   // Dashboard & notifications
   dashboard: () => request<Dashboard>("GET", "/dashboard"),
   unreadCount: () => request<{ count: number }>("GET", "/notifications/unread-count"),
+  notifications: () => request<Notification[]>("GET", "/notifications"),
+  markRead: (id: string) => request<void>("POST", `/notifications/${id}/read`),
+  markAllRead: () => request<void>("POST", "/notifications/read-all"),
+
+  // Settings (all roles)
+  updateAccount: (input: AccountUpdateInput) => request<User>("PUT", "/me", input),
+  changePassword: (input: ChangePasswordInput) => request<AuthResponse>("POST", "/auth/password", input),
+  deleteAccount: (password: string) => request<void>("DELETE", "/me", { password }),
+  exportMyData: () => request<unknown>("GET", "/me/export"),
+
+  // Employer
+  employer: {
+    overview: () => request<EmployerOverview>("GET", "/employer/overview"),
+    opportunities: () => request<EmployerOpportunity[]>("GET", "/employer/opportunities"),
+    createOpportunity: (input: OpportunityInput) => request<{ id: string }>("POST", "/employer/opportunities", input),
+    updateOpportunity: (id: string, input: OpportunityInput) => request<void>("PUT", `/employer/opportunities/${id}`, input),
+    setOpen: (id: string, open: boolean) => request<void>("POST", `/employer/opportunities/${id}/${open ? "open" : "close"}`),
+    deleteOpportunity: (id: string) => request<void>("DELETE", `/employer/opportunities/${id}`),
+    applicants: (id: string) =>
+      request<{ opportunity: { id: string; title: string; skills: string[]; isOpen: boolean }; applicants: Applicant[] }>(
+        "GET",
+        `/employer/opportunities/${id}/applicants`,
+      ),
+    setStatus: (applicationId: string, status: ApplicationStatusKey) =>
+      request<void>("PUT", `/employer/applications/${applicationId}/status`, { status }),
+    candidates: (filters: { skills: string[]; location?: string; graduationYear?: string; verifiedOnly?: boolean }) => {
+      const q = new URLSearchParams();
+      if (filters.skills.length) q.set("skills", filters.skills.join(","));
+      if (filters.location) q.set("location", filters.location);
+      if (filters.graduationYear) q.set("graduationYear", filters.graduationYear);
+      if (filters.verifiedOnly) q.set("verifiedOnly", "true");
+      return request<CandidateSummary[]>("GET", `/employer/candidates?${q}`);
+    },
+    candidate: (profileId: string) => request<CandidateDetail>("GET", `/employer/candidates/${profileId}`),
+    shortlist: () => request<ShortlistEntry[]>("GET", "/employer/shortlist"),
+    addToShortlist: (profileId: string, note?: string) => request<void>("POST", "/employer/shortlist", { profileId, note }),
+    removeFromShortlist: (profileId: string) => request<void>("DELETE", `/employer/shortlist/${profileId}`),
+  },
+
+  // Mentor
+  mentorArea: {
+    overview: () => request<MentorOverview>("GET", "/mentor/overview"),
+    accept: (id: string) => request<void>("POST", `/mentor/sessions/${id}/accept`),
+    decline: (id: string, reason?: string) => request<void>("POST", `/mentor/sessions/${id}/decline`, { reason }),
+    complete: (id: string, note?: string) => request<void>("POST", `/mentor/sessions/${id}/complete`, { note }),
+    profile: () => request<MentorProfile>("GET", "/mentor/profile"),
+    updateProfile: (input: MentorProfileInput) => request<MentorProfile>("PUT", "/mentor/profile", input),
+  },
+
+  // Admin
+  admin: {
+    overview: () => request<AdminOverview>("GET", "/admin/overview"),
+    users: (role?: Role) => request<AdminUser[]>("GET", `/admin/users${role ? `?role=${role}` : ""}`),
+  },
 };
 
 /** Where each role lands after logging in. */

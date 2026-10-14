@@ -85,6 +85,8 @@ export const onboardingSchema = z.object({
   targetRole: optionalText(120),
   githubUrl: optionalText(200),
   websiteUrl: optionalText(200),
+  /** POPIA opt-in: let employers find this profile */
+  visibleToEmployers: z.boolean().default(false),
 });
 export type OnboardingInput = z.input<typeof onboardingSchema>;
 
@@ -138,3 +140,83 @@ export const bookSessionSchema = z.object({
   question: optionalText(1000),
 });
 export type BookSessionInput = z.input<typeof bookSessionSchema>;
+
+// ---------- Settings (all roles) ----------
+
+export const accountUpdateSchema = z.object({
+  firstName: z.string().trim().min(1, "Please enter your first name.").max(60),
+  lastName: z.string().trim().min(1, "Please enter your last name.").max(60),
+});
+export type AccountUpdateInput = z.input<typeof accountUpdateSchema>;
+
+export const changePasswordSchema = z
+  .object({
+    currentPassword: z.string().min(1, "Please enter your current password."),
+    newPassword: password,
+    confirm: z.string(),
+  })
+  .refine((v) => v.newPassword === v.confirm, { message: "Passwords do not match.", path: ["confirm"] });
+export type ChangePasswordInput = z.input<typeof changePasswordSchema>;
+
+export const visibilitySchema = z.object({ visibleToEmployers: z.boolean() });
+
+// ---------- Employer ----------
+
+/** One item per line in the form -> array of trimmed, non-empty strings */
+const lines = (maxItems: number) =>
+  z
+    .union([z.string(), z.array(z.string())])
+    .transform((v) => (Array.isArray(v) ? v : v.split("\n")).map((x) => x.trim()).filter(Boolean))
+    .pipe(z.array(z.string().max(300)).max(maxItems, `No more than ${maxItems} items.`));
+
+export const opportunityTypes = ["Job", "Internship", "Learnership", "Freelance Project"] as const;
+export const workModes = ["On-site", "Hybrid", "Remote"] as const;
+
+export const opportunitySchema = z.object({
+  title: z.string().trim().min(3, "Please enter a job title.").max(120),
+  type: z.enum(opportunityTypes, { error: "Please choose a type." }),
+  location: z.string().trim().min(2, "Please enter a location.").max(120),
+  workMode: z.enum(workModes, { error: "Please choose a work mode." }),
+  experience: z.string().trim().min(2, "Please describe the experience needed.").max(60),
+  salary: z.string().trim().min(2, "Please give a salary or stipend.").max(80),
+  description: z.string().trim().min(20, "Please write at least 20 characters.").max(3000),
+  skills: z.array(z.string().trim().min(1).max(40)).min(1, "Choose at least one skill.").max(10, "No more than 10 skills."),
+  responsibilities: lines(12),
+  requirements: lines(12),
+});
+export type OpportunityInput = z.input<typeof opportunitySchema>;
+
+export const applicationStatuses = ["submitted", "under_review", "interview", "offer", "rejected"] as const;
+export const applicationStatusSchema = z.object({ status: z.enum(applicationStatuses) });
+
+export const shortlistSchema = z.object({
+  profileId: z.string().min(1),
+  note: optionalText(300),
+});
+export type ShortlistInput = z.input<typeof shortlistSchema>;
+
+// ---------- Mentor ----------
+
+export const weekDays = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"] as const;
+
+export const mentorProfileSchema = z.object({
+  jobTitle: z.string().trim().min(2, "Please enter your job title.").max(80),
+  company: z.string().trim().min(1, "Please enter your company.").max(80),
+  years: z.coerce.number().int().min(0).max(60),
+  bio: z.string().trim().max(1000),
+  availability: z.string().trim().max(80),
+  specialisations: lines(10),
+  languages: lines(6),
+  slots: z
+    .array(
+      z.object({
+        day: z.enum(weekDays),
+        times: z.array(z.string().regex(/^\d{2}:\d{2}$/, "Times look like 17:30.")).max(12),
+      }),
+    )
+    .max(7),
+});
+export type MentorProfileInput = z.input<typeof mentorProfileSchema>;
+
+export const completeSessionSchema = z.object({ note: optionalText(1000) });
+export const declineSessionSchema = z.object({ reason: optionalText(300) });

@@ -62,7 +62,11 @@ function toDto(o: OppWithEmployer, match: number, saved: boolean, applied: boole
 export async function listOpportunities(userId: string) {
   const profile = await getProfileOrThrow(userId);
   const [opps, sets, saved, applied] = await Promise.all([
-    prisma.opportunity.findMany({ include: { employer: { select: { name: true } } }, orderBy: { postedAt: "desc" } }),
+    prisma.opportunity.findMany({
+      where: { isOpen: true },
+      include: { employer: { select: { name: true } } },
+      orderBy: { postedAt: "desc" },
+    }),
     skillSets(profile.id),
     prisma.savedOpportunity.findMany({ where: { profileId: profile.id }, select: { opportunityId: true } }),
     prisma.application.findMany({ where: { profileId: profile.id }, select: { opportunityId: true } }),
@@ -78,14 +82,28 @@ export async function listOpportunities(userId: string) {
 
 export async function getOpportunity(userId: string, id: string) {
   const profile = await getProfileOrThrow(userId);
-  const o = await prisma.opportunity.findUnique({ where: { id }, include: { employer: { select: { name: true } } } });
+  const o = await prisma.opportunity.findUnique({
+    where: { id },
+    include: { employer: { include: { _count: { select: { opportunities: { where: { isOpen: true } } } } } } },
+  });
   if (!o) throw notFound("Opportunity not found.");
   const sets = await skillSets(profile.id);
-  const [saved, applied] = await Promise.all([
+  const [saved, application] = await Promise.all([
     prisma.savedOpportunity.findUnique({ where: { profileId_opportunityId: { profileId: profile.id, opportunityId: id } } }),
     prisma.application.findUnique({ where: { profileId_opportunityId: { profileId: profile.id, opportunityId: id } } }),
   ]);
-  return toDto(o, calculateMatch(o.skills, sets.verified, sets.declared), !!saved, !!applied);
+  if (!o.isOpen && !application) throw notFound("This opportunity has closed.");
+  return {
+    ...toDto(o, calculateMatch(o.skills, sets.verified, sets.declared), !!saved, !!application),
+    isOpen: o.isOpen,
+    applicationStatus: application ? STATUS_LABEL[application.status] : null,
+    /** each required skill compared with the graduate's skills (design doc 4.3.3) */
+    skillMatch: o.skills.map((skill) => ({
+      skill,
+      status: sets.verified.has(skill.toLowerCase()) ? "verified" : sets.declared.has(skill.toLowerCase()) ? "declared" : "missing",
+    })),
+    employer: { name: o.employer.name, industry: o.employer.industry, openRoles: o.employer._count.opportunities },
+  };
 }
 
 /** Saves the opportunity, or un-saves it if it was already saved. */
@@ -133,6 +151,7 @@ export async function apply(userId: string, opportunityId: string, data: z.outpu
   const profile = await getProfileOrThrow(userId);
   const opp = await prisma.opportunity.findUnique({ where: { id: opportunityId }, include: { employer: true } });
   if (!opp) throw notFound("Opportunity not found.");
+  if (!opp.isOpen) throw conflict("This opportunity has closed.");
   const existing = await prisma.application.findUnique({
     where: { profileId_opportunityId: { profileId: profile.id, opportunityId } },
   });
@@ -150,6 +169,10 @@ export async function apply(userId: string, opportunityId: string, data: z.outpu
     });
     await addActivity(tx, userId, `Applied for ${opp.title}`, opp.employer.name, "applied");
     await addNotification(tx, userId, "Application submitted", `${opp.title} at ${opp.employer.name}.`, "application");
+    if (opp.employer.userId) {
+      const me = snapshot.name;
+      await addNotification(tx, opp.employer.userId, `New application from ${me}`, `${opp.title}`, "application");
+    }
   });
   return (await listApplications(userId)).find((a) => a.opportunityId === opportunityId)!;
 }
@@ -175,3 +198,19 @@ export async function listApplications(userId: string) {
     coverNote: a.coverNote,
   }));
 }
+
+/** Graduates can withdraw an application until an interview or offer stage. */
+export async function withdrawApplication(userId: string, applicationId: string) {
+  const profile = await getProfileOrThrow(userId);
+  const app = await prisma.application.findUnique({ where: { id: applicationId }, include: { opportunity: true } });
+  if (!app || app.profileId !== profile.id) throw notFound("Application not found.");
+  if (app.status !== "submitted" && app.status !== "under_review") {
+    throw conflict("This application can no longer be withdrawn.");
+  }
+  await prisma.$transaction(async (tx) => {
+    await tx.application.delete({ where: { id: applicationId } });
+    await addActivity(tx, userId, `Withdrew application for ${app.opportunity.title}`, "Application withdrawn", "applied");
+  });
+}
+
+export { STATUS_LABEL };

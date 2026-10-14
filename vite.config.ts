@@ -14,6 +14,8 @@ export default defineConfig({
   },
   // Don't pick up any postcss config from parent folders
   css: { postcss: {} },
+  // the main bundle (React, Radix, TanStack, Zod) is ~750 kB before gzip; role pages are split out
+  build: { chunkSizeWarningLimit: 1000 },
   server: {
     port: 5173,
     open: true,

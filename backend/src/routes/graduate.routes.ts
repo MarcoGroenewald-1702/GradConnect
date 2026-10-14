@@ -1,5 +1,5 @@
 import { Router } from "express";
-import { applySchema, onboardingSchema, profileUpdateSchema, projectEvidenceSchema } from "@shared/schemas";
+import { applySchema, onboardingSchema, profileUpdateSchema, projectEvidenceSchema, visibilitySchema } from "@shared/schemas";
 import { requireAuth, requireRole, userId } from "../middleware/auth";
 import { validateBody } from "../middleware/validate";
 import { getDashboard } from "../services/dashboard.service";
@@ -10,8 +10,9 @@ import {
   listApplications,
   listOpportunities,
   toggleSaved,
+  withdrawApplication,
 } from "../services/opportunities.service";
-import { completeOnboarding, getProfile, updateProfile } from "../services/profile.service";
+import { completeOnboarding, getProfile, setVisibility, updateProfile } from "../services/profile.service";
 import { mySkills, verifyWithProject } from "../services/skills.service";
 
 /** Endpoints for graduates (role-based access control: graduate only). */
@@ -56,6 +57,14 @@ graduateRouter.post("/opportunities/:id/apply", validateBody(applySchema), async
 });
 graduateRouter.get("/applications", async (req, res) => {
   res.json(await listApplications(userId(req)));
+});
+graduateRouter.delete("/applications/:id", async (req, res) => {
+  await withdrawApplication(userId(req), String(req.params.id));
+  res.status(204).end();
+});
+/** POPIA: opt in / out of being found by employers */
+graduateRouter.put("/profile/visibility", validateBody(visibilitySchema), async (req, res) => {
+  res.json(await setVisibility(userId(req), req.body.visibleToEmployers));
 });
 
 // ----- Dashboard -----

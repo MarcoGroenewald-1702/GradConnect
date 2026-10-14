@@ -8,6 +8,7 @@ import { toast } from "sonner";
 import { AppShell } from "@/components/AppShell";
 import { SkillBadge } from "@/components/brand";
 import { RequireRole } from "@/components/RequireRole";
+import { VisibilityToggle } from "@/components/visibility";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { FieldError } from "@/components/ui/form-error";
@@ -103,6 +104,9 @@ function ProfileContent() {
             </div>
             <Progress value={user.profileCompleteness} className="mt-2" />
             <p className="mt-2 text-xs text-muted-foreground">Career readiness score: {readiness.total} / 100</p>
+          </div>
+          <div className="mt-4 rounded-xl border border-border p-4">
+            <VisibilityToggle />
           </div>
         </section>
 

@@ -1,11 +1,11 @@
 import { Router, type Response } from "express";
-import { loginSchema, registerSchema } from "@shared/schemas";
+import { changePasswordSchema, loginSchema, registerSchema } from "@shared/schemas";
 import { env } from "../config/env";
 import { unauthorized } from "../lib/errors";
 import { requireAuth, userId } from "../middleware/auth";
 import { authRateLimit, requireCsrfHeader } from "../middleware/security";
 import { validateBody } from "../middleware/validate";
-import { getUserDto, login, register } from "../services/auth.service";
+import { changePassword, getUserDto, login, register } from "../services/auth.service";
 import { revokeRefreshToken, rotateRefreshToken, signAccessToken } from "../services/tokens";
 
 export const authRouter = Router();
@@ -66,4 +66,11 @@ authRouter.post("/logout", requireCsrfHeader, async (req, res) => {
 /** GET /api/auth/me */
 authRouter.get("/me", requireAuth, async (req, res) => {
   res.json(await getUserDto(userId(req)));
+});
+
+/** POST /api/auth/password  -> change password; signs out every other device */
+authRouter.post("/password", requireAuth, authRateLimit, validateBody(changePasswordSchema), async (req, res) => {
+  const session = await changePassword(userId(req), req.body.currentPassword, req.body.newPassword);
+  setRefreshCookie(res, session.refreshToken, session.refreshExpiresAt);
+  res.json({ accessToken: session.accessToken, user: session.user });
 });

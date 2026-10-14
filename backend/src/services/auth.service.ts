@@ -44,6 +44,7 @@ export async function getUserDto(userId: string) {
     jobTitle: user.mentor?.jobTitle ?? null,
     onboarded: user.role === "graduate" ? (p?.onboarded ?? false) : true,
     profileCompleteness: p?.completeness ?? 0,
+    visibleToEmployers: p?.visibleToEmployers ?? false,
   };
 }
 export type UserDto = Awaited<ReturnType<typeof getUserDto>>;
@@ -140,4 +141,28 @@ async function startSession(userId: string, role: Parameters<typeof signAccessTo
     refreshExpiresAt: refresh.expiresAt,
     user: await getUserDto(userId),
   };
+}
+
+/** Settings: change your name. */
+export async function updateAccount(userId: string, data: { firstName: string; lastName: string }) {
+  await prisma.user.update({ where: { id: userId }, data });
+  // keep a mentor's public name in step with the account
+  await prisma.mentor.updateMany({
+    where: { userId },
+    data: { name: `${data.firstName} ${data.lastName}`, initials: `${data.firstName[0]}${data.lastName[0]}`.toUpperCase() },
+  });
+  return getUserDto(userId);
+}
+
+/** Settings: change password. Logs out every other device by revoking all refresh tokens. */
+export async function changePassword(userId: string, currentPassword: string, newPassword: string) {
+  const user = await prisma.user.findUnique({ where: { id: userId } });
+  if (!user || !(await checkPassword(user.passwordHash, currentPassword))) {
+    throw unauthorized("Your current password is incorrect.");
+  }
+  await prisma.$transaction([
+    prisma.user.update({ where: { id: userId }, data: { passwordHash: await hashPassword(newPassword) } }),
+    prisma.refreshToken.updateMany({ where: { userId, revokedAt: null }, data: { revokedAt: new Date() } }),
+  ]);
+  return startSession(user.id, user.role);
 }

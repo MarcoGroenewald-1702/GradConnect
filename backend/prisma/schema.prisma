@@ -30,6 +30,13 @@ enum ApplicationStatus {
   rejected
 }
 
+enum SessionStatus {
+  /// waiting for the mentor to accept
+  requested
+  accepted
+  completed
+}
+
 enum ActivityKind {
   verified
   applied
@@ -78,23 +85,25 @@ model RefreshToken {
 
 /// Graduate-specific profile, skills, education and portfolio.
 model Profile {
-  id             String   @id @default(uuid())
-  userId         String   @unique
-  headline       String?
-  bio            String?
-  location       String?
-  institution    String?
-  qualification  String?
-  graduationYear String?
-  careerInterest String?
-  targetRole     String?
-  githubUrl      String?
-  websiteUrl     String?
-  onboarded      Boolean  @default(false)
+  id                 String   @id @default(uuid())
+  userId             String   @unique
+  headline           String?
+  bio                String?
+  location           String?
+  institution        String?
+  qualification      String?
+  graduationYear     String?
+  careerInterest     String?
+  targetRole         String?
+  githubUrl          String?
+  websiteUrl         String?
+  onboarded          Boolean  @default(false)
+  /// POPIA: the graduate must opt in before employers can find their profile
+  visibleToEmployers Boolean  @default(false)
   /// 0-100, calculated during onboarding
-  completeness   Int      @default(40)
-  createdAt      DateTime @default(now())
-  updatedAt      DateTime @updatedAt
+  completeness       Int      @default(40)
+  createdAt          DateTime @default(now())
+  updatedAt          DateTime @updatedAt
 
   user               User                @relation(fields: [userId], references: [id], onDelete: Cascade)
   declaredSkills     ProfileSkill[]
@@ -105,6 +114,7 @@ model Profile {
   mentorSessions     MentorSession[]
   savedOpportunities SavedOpportunity[]
   applications       Application[]
+  shortlistedBy      Shortlist[]
 }
 
 /// Skills taxonomy (Languages, Frameworks, Cloud, Data, Security, Tools).
@@ -253,21 +263,26 @@ model Mentor {
 }
 
 model MentorSession {
-  id        String   @id @default(uuid())
-  mentorId  String
-  profileId String
-  topic     String
-  goal      String?
-  question  String?
-  day       String
-  time      String
-  createdAt DateTime @default(now())
+  id         String        @id @default(uuid())
+  mentorId   String
+  profileId  String
+  topic      String
+  goal       String?
+  question   String?
+  day        String
+  time       String
+  /// the actual date of the session, e.g. "2026-10-16" (South African time)
+  date       String
+  status     SessionStatus @default(accepted)
+  /// mentor's private notes after the session
+  mentorNote String?
+  createdAt  DateTime      @default(now())
 
   mentor  Mentor  @relation(fields: [mentorId], references: [id])
   profile Profile @relation(fields: [profileId], references: [id], onDelete: Cascade)
 
-  /// a weekly slot can only be booked once
-  @@unique([mentorId, day, time])
+  /// a slot on a given date can only be booked once
+  @@unique([mentorId, date, time])
   @@index([profileId])
 }
 
@@ -280,6 +295,21 @@ model Employer {
 
   user          User?         @relation(fields: [userId], references: [id], onDelete: SetNull)
   opportunities Opportunity[]
+  shortlist     Shortlist[]
+}
+
+/// Candidates an employer has saved.
+model Shortlist {
+  id         String   @id @default(uuid())
+  employerId String
+  profileId  String
+  note       String?
+  createdAt  DateTime @default(now())
+
+  employer Employer @relation(fields: [employerId], references: [id], onDelete: Cascade)
+  profile  Profile  @relation(fields: [profileId], references: [id], onDelete: Cascade)
+
+  @@unique([employerId, profileId])
 }
 
 /// Job, internship, learnership or project posting.
@@ -296,6 +326,8 @@ model Opportunity {
   skills           String[]
   responsibilities String[]
   requirements     String[]
+  /// closed opportunities are hidden from graduates
+  isOpen           Boolean  @default(true)
   postedAt         DateTime @default(now())
 
   employer     Employer           @relation(fields: [employerId], references: [id])

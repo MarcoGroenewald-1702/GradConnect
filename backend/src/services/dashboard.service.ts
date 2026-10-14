@@ -1,5 +1,6 @@
 import { prisma } from "../db";
 import { unreadCount } from "./feed.service";
+import { upcomingSessions } from "./mentors.service";
 import { listOpportunities } from "./opportunities.service";
 import { getProfileOrThrow, readinessFor, skillsFor } from "./profile.service";
 
@@ -10,12 +11,7 @@ export async function getDashboard(userId: string) {
     readinessFor(profile.id, profile.completeness),
     prisma.activity.findMany({ where: { userId }, orderBy: { createdAt: "desc" }, take: 5 }),
     skillsFor(profile.id),
-    prisma.mentorSession.findMany({
-      where: { profileId: profile.id },
-      include: { mentor: { select: { name: true } } },
-      orderBy: { createdAt: "desc" },
-      take: 3,
-    }),
+    upcomingSessions(profile.id, 3),
     listOpportunities(userId),
     unreadCount(userId),
   ]);
@@ -29,15 +25,7 @@ export async function getDashboard(userId: string) {
       time: a.createdAt.toISOString(),
     })),
     verifiedSkills: skills.verified.map((s) => s.name),
-    sessions: sessions.map((s) => ({
-      id: s.id,
-      mentorId: s.mentorId,
-      mentorName: s.mentor.name,
-      topic: s.topic,
-      goal: s.goal,
-      day: s.day,
-      time: s.time,
-    })),
+    sessions,
     recommendedOpportunities: opportunities.slice(0, 4),
     unreadNotifications: unread,
   };

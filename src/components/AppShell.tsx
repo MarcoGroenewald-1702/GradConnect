@@ -3,6 +3,7 @@ import { Link, useLocation, useNavigate } from "react-router-dom";
 import {
   Bell,
   BookOpen,
+  CalendarClock,
   Briefcase,
   ClipboardList,
   FileCheckCorner,
@@ -57,20 +58,22 @@ const employerNav: NavItem[] = [
   { label: "Opportunities", to: "/employer/opportunities", icon: Briefcase },
   { label: "Candidates", to: "/employer/candidates", icon: Users },
   { label: "Shortlisted", to: "/employer/shortlisted", icon: Star },
+  { label: "Notifications", to: "/notifications", icon: Bell },
   { label: "Settings", to: "/settings", icon: Settings },
 ];
 
 const mentorNav: NavItem[] = [
   { label: "Dashboard", to: "/mentor/dashboard", icon: LayoutDashboard },
-  { label: "Mentees", to: "/mentors", icon: Users },
+  { label: "Availability", to: "/mentor/availability", icon: CalendarClock },
+  { label: "Mentees", to: "/mentor/mentees", icon: Users },
   { label: "Notifications", to: "/notifications", icon: Bell },
   { label: "Settings", to: "/settings", icon: Settings },
 ];
 
 const adminNav: NavItem[] = [
   { label: "Overview", to: "/admin", icon: Gauge },
-  { label: "Opportunities", to: "/opportunities", icon: Briefcase },
-  { label: "Assessments", to: "/assessments", icon: FileCheckCorner },
+  { label: "Users", to: "/admin/users", icon: Users },
+  { label: "Notifications", to: "/notifications", icon: Bell },
   { label: "Settings", to: "/settings", icon: Settings },
 ];
 
@@ -85,7 +88,8 @@ function SidebarNav({ items, onNavigate }: { items: NavItem[]; onNavigate?: () =
   return (
     <nav className="flex flex-col gap-1" aria-label="Main">
       {items.map((item) => {
-        const active = pathname === item.to || pathname.startsWith(`${item.to}/`);
+        const active =
+          pathname === item.to || (pathname.startsWith(`${item.to}/`) && !items.some((i) => i !== item && pathname.startsWith(i.to) && i.to.length > item.to.length));
         return (
           <Link
             key={item.to}
@@ -131,9 +135,11 @@ function UserMenu() {
       <DropdownMenuContent align="end" className="w-52">
         <DropdownMenuLabel>{user?.email ?? "Not signed in"}</DropdownMenuLabel>
         <DropdownMenuSeparator />
-        <DropdownMenuItem asChild>
-          <Link to="/profile">Profile &amp; Skills</Link>
-        </DropdownMenuItem>
+        {role === "graduate" && (
+          <DropdownMenuItem asChild>
+            <Link to="/profile">Profile &amp; Skills</Link>
+          </DropdownMenuItem>
+        )}
         <DropdownMenuItem asChild>
           <Link to="/settings">Settings</Link>
         </DropdownMenuItem>

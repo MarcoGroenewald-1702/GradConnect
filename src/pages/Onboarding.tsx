@@ -3,6 +3,7 @@ import { Link, useNavigate } from "react-router-dom";
 import { ArrowLeft, ArrowRight, CircleCheck } from "lucide-react";
 import { Logo, SkillBadge } from "@/components/brand";
 import { Button } from "@/components/ui/button";
+import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Progress } from "@/components/ui/progress";
@@ -32,6 +33,7 @@ function OnboardingContent() {
   const [selectedSkills, setSelectedSkills] = useState<string[]>([]);
   const [goals, setGoals] = useState({ interest: user?.careerInterest ?? "", target: "" });
   const [portfolio, setPortfolio] = useState({ github: "", site: "" });
+  const [visible, setVisible] = useState(false);
 
   // Each completed section adds 12% on top of a 40% base
   const sectionsDone = [
@@ -56,6 +58,7 @@ function OnboardingContent() {
       targetRole: goals.target,
       githubUrl: portfolio.github,
       websiteUrl: portfolio.site,
+      visibleToEmployers: visible,
     };
     // Same Zod rules as the API, checked before sending
     const check = onboardingSchema.safeParse(input);
@@ -231,6 +234,15 @@ function OnboardingContent() {
                 <Label htmlFor="site">Personal site or project link</Label>
                 <Input id="site" value={portfolio.site} onChange={(e) => setPortfolio({ ...portfolio, site: e.target.value })} />
               </div>
+              <label className="flex cursor-pointer items-start gap-3 rounded-xl border border-border bg-surface p-4">
+                <Checkbox checked={visible} onCheckedChange={(v) => setVisible(v === true)} className="mt-0.5" />
+                <span>
+                  <span className="block text-sm font-medium text-foreground">Let employers find my profile</span>
+                  <span className="block text-xs text-muted-foreground">
+                    Your name, qualification and skills will appear in employer candidate search. You can change this any time in Settings.
+                  </span>
+                </span>
+              </label>
             </div>
           )}
 

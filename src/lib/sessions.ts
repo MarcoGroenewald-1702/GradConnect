@@ -1,34 +1,30 @@
-// Helpers for mentor sessions. Mentors publish weekly slots like "Thu 17:00" (South African time, UTC+2).
+// Helpers for mentor sessions. Times are South African time (UTC+2, no daylight saving).
 
-const DAYS = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
-const SAST_OFFSET_HOURS = 2; // South Africa has no daylight saving
+const SAST_OFFSET_HOURS = 2;
 
-/** The next date this weekly slot happens, as a real Date (UTC). */
-export function nextOccurrence(day: string, time: string, from = new Date()): Date {
-  const [hours, minutes] = time.split(":").map(Number);
-  const target = DAYS.indexOf(day);
-  // current date/time in South Africa
-  const sastNow = new Date(from.getTime() + SAST_OFFSET_HOURS * 3_600_000);
-  for (let add = 0; add <= 7; add++) {
-    const d = new Date(Date.UTC(sastNow.getUTCFullYear(), sastNow.getUTCMonth(), sastNow.getUTCDate() + add, hours, minutes));
-    const utc = new Date(d.getTime() - SAST_OFFSET_HOURS * 3_600_000);
-    if (d.getUTCDay() === target && utc > from) return utc;
-  }
-  return from;
+/** The session's start as a real Date, from "2026-10-16" + "17:00" in South African time. */
+export function sessionStart(date: string, time: string): Date {
+  const [y, mo, d] = date.split("-").map(Number);
+  const [h, mi] = time.split(":").map(Number);
+  return new Date(Date.UTC(y, mo - 1, d, h - SAST_OFFSET_HOURS, mi));
 }
 
 /** "Thu 16 Oct, 17:00" */
-export function nextSessionLabel(day: string, time: string) {
-  const date = nextOccurrence(day, time);
-  const label = date.toLocaleDateString("en-ZA", { weekday: "short", day: "numeric", month: "short", timeZone: "Africa/Johannesburg" });
+export function sessionLabel(date: string, time: string) {
+  const label = sessionStart(date, time).toLocaleDateString("en-ZA", {
+    weekday: "short",
+    day: "numeric",
+    month: "short",
+    timeZone: "Africa/Johannesburg",
+  });
   return `${label}, ${time}`;
 }
 
 const icsDate = (d: Date) => d.toISOString().replace(/[-:]/g, "").replace(/\.\d{3}/, "");
 
 /** Downloads a calendar invitation (.ics) that opens in Outlook, Google Calendar or Apple Calendar. */
-export function downloadCalendarInvite(session: { mentorName: string; topic: string; goal?: string | null; day: string; time: string }) {
-  const start = nextOccurrence(session.day, session.time);
+export function downloadCalendarInvite(session: { mentorName: string; topic: string; goal?: string | null; date: string; time: string }) {
+  const start = sessionStart(session.date, session.time);
   const end = new Date(start.getTime() + 60 * 60_000);
   const lines = [
     "BEGIN:VCALENDAR",
@@ -53,7 +49,18 @@ export function downloadCalendarInvite(session: { mentorName: string; topic: str
   const url = URL.createObjectURL(blob);
   const a = document.createElement("a");
   a.href = url;
-  a.download = `gradconnect-session-${session.day}-${session.time.replace(":", "")}.ics`;
+  a.download = `gradconnect-session-${session.date}-${session.time.replace(":", "")}.ics`;
+  a.click();
+  URL.revokeObjectURL(url);
+}
+
+/** Downloads any JSON as a file (used for the POPIA data export). */
+export function downloadJson(data: unknown, filename: string) {
+  const blob = new Blob([JSON.stringify(data, null, 2)], { type: "application/json" });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = filename;
   a.click();
   URL.revokeObjectURL(url);
 }

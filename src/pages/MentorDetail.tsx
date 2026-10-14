@@ -14,7 +14,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { useBookSession, useMentor, useMySkills } from "@/lib/queries";
-import { downloadCalendarInvite, nextSessionLabel } from "@/lib/sessions";
+import { downloadCalendarInvite, sessionLabel } from "@/lib/sessions";
 import type { BookedSession } from "@/lib/types";
 import { cn } from "@/lib/utils";
 
@@ -25,7 +25,7 @@ function MentorDetailContent() {
   const { data: mentor, error } = useMentor(id);
   const mySkills = useMySkills().data ?? [];
   const book = useBookSession(id);
-  const [slot, setSlot] = useState<{ day: string; time: string } | null>(null);
+  const [slot, setSlot] = useState<{ day: string; time: string; date: string } | null>(null);
   const [booked, setBooked] = useState<BookedSession | null>(null);
 
   const form = useForm<BookSessionInput>({
@@ -47,8 +47,8 @@ function MentorDetailContent() {
   // Topic choices: the mentor's specialisations, then the graduate's own skills, then general career topics
   const topics = [...new Set([...mentor.specialisations, ...mySkills.map((s) => s.name), ...generalTopics])];
 
-  function pick(day: string, time: string) {
-    setSlot({ day, time });
+  function pick(day: string, time: string, date: string) {
+    setSlot({ day, time, date });
     setBooked(null);
     form.setValue("day", day);
     form.setValue("time", time);
@@ -57,10 +57,10 @@ function MentorDetailContent() {
   async function submit(values: BookSessionInput) {
     try {
       const session = await book.mutateAsync(values);
-      setBooked({ ...session, mentorInitials: mentor!.initials, mentorTitle: "", question: values.question ?? null, bookedAt: "" });
+      setBooked(session);
       setSlot(null);
       form.reset();
-      toast.success(`Session booked with ${mentor!.name}`);
+      toast.success(session.status === "requested" ? `Request sent to ${mentor!.name}` : `Session booked with ${mentor!.name}`);
     } catch (e) {
       toast.error(e instanceof Error ? e.message : "Could not book the session.");
     }
@@ -115,7 +115,9 @@ function MentorDetailContent() {
             <div className="mt-4 grid gap-3 sm:grid-cols-2">
               {mentor.slots.map((d) => (
                 <div key={d.day} className="rounded-xl border border-border bg-surface p-3">
-                  <p className="text-sm font-semibold text-foreground">{d.day}</p>
+                  <p className="text-sm font-semibold text-foreground">
+                    {d.times[0] ? sessionLabel(d.times[0].date, d.times[0].time).split(",")[0] : d.day}
+                  </p>
                   <div className="mt-2 flex flex-wrap gap-2">
                     {d.times.map((t) => {
                       const selected = slot?.day === d.day && slot.time === t.time;
@@ -123,9 +125,9 @@ function MentorDetailContent() {
                         <button
                           key={t.time}
                           disabled={!t.available}
-                          onClick={() => pick(d.day, t.time)}
+                          onClick={() => pick(d.day, t.time, t.date)}
                           aria-pressed={selected}
-                          title={t.mine ? "You booked this slot" : t.available ? "Available" : "Already booked"}
+                          title={`${sessionLabel(t.date, t.time)}: ${t.mine ? "you booked this" : t.available ? "available" : "already booked"}`}
                           className={cn(
                             "min-h-10 min-w-16 rounded-lg border px-3 text-sm font-semibold transition-colors",
                             selected && "border-action bg-action text-action-foreground",
@@ -151,10 +153,14 @@ function MentorDetailContent() {
           {booked && (
             <div className="rounded-xl border border-success/30 bg-success-soft p-5">
               <p className="flex items-center gap-2 font-semibold text-foreground">
-                <CalendarCheck className="size-5 text-success" aria-hidden /> Booked: {nextSessionLabel(booked.day, booked.time)}
+                <CalendarCheck className="size-5 text-success" aria-hidden />{" "}
+                {booked.status === "requested" ? "Requested" : "Booked"}: {sessionLabel(booked.date, booked.time)}
               </p>
               <p className="mt-1 text-sm text-muted-foreground">
-                {mentor.name} · {booked.topic}. You'll find it on your dashboard and under Mentors.
+                {mentor.name} · {booked.topic}.{" "}
+                {booked.status === "requested"
+                  ? `${mentor.name.split(" ")[0]} will confirm, and you'll get a notification.`
+                  : "You'll find it on your dashboard and under Mentors."}
               </p>
               <Button variant="outline" size="sm" className="mt-3" onClick={() => downloadCalendarInvite(booked)}>
                 <CalendarPlus className="size-4" /> Add to calendar
@@ -165,8 +171,13 @@ function MentorDetailContent() {
           {slot && (
             <form className="surface-panel space-y-4 p-6" onSubmit={form.handleSubmit(submit)} noValidate>
               <h2 className="text-base font-semibold text-foreground">
-                Book {nextSessionLabel(slot.day, slot.time)} with {mentor.name.split(" ")[0]}
+                Book {sessionLabel(slot.date, slot.time)} with {mentor.name.split(" ")[0]}
               </h2>
+              {mentor.confirmsBookings && (
+                <p className="text-xs text-muted-foreground">
+                  {mentor.name.split(" ")[0]} confirms each request personally; you'll be notified when it's accepted.
+                </p>
+              )}
               <div className="space-y-2">
                 <Label htmlFor="topic">Topic</Label>
                 <select
