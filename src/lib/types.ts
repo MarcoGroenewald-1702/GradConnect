@@ -142,3 +142,108 @@ export interface ProfileSnapshot {
   readinessScore: number;
   takenAt: string;
 }
+
+// ---------- Assessments ----------
+
+export interface AssessmentSummary {
+  id: string;
+  title: string;
+  skillId: string;
+  skill: string;
+  category: string;
+  minutes: number;
+  questionCount: number;
+  passMark: number;
+  verified: boolean;
+  verifiedBy: "assessment" | "project" | null;
+  attempts: number;
+  bestScore: number | null;
+  lastAttemptAt: string | null;
+}
+
+export interface AssessmentAttempt {
+  attemptId: string;
+  assessment: { id: string; title: string; skill: string; minutes: number; passMark: number };
+  questions: { prompt: string; options: string[] }[];
+  startedAt: string;
+  endsAt: string;
+}
+
+export interface AssessmentResult {
+  score: number;
+  correct: number;
+  total: number;
+  passMark: number;
+  passed: boolean;
+  late: boolean;
+  skill: string;
+  review: { prompt: string; options: string[]; chosen: number; isCorrect: boolean; answer: number | null }[];
+}
+
+// ---------- Learning ----------
+
+export interface ModuleSummary {
+  id: string;
+  title: string;
+  skill: string;
+  track: string;
+  difficulty: string;
+  minutes: number;
+  description: string;
+  lessonCount: number;
+  completedCount: number;
+  progress: number;
+  enrolled: boolean;
+  completed: boolean;
+  recommended: boolean;
+}
+
+export interface ModuleDetail {
+  id: string;
+  title: string;
+  skill: string;
+  track: string;
+  difficulty: string;
+  minutes: number;
+  description: string;
+  objectives: string[];
+  lessons: { index: number; title: string; minutes: number; content: string[]; done: boolean }[];
+  enrolled: boolean;
+  progress: number;
+  completedAt: string | null;
+}
+
+// ---------- Mentors ----------
+
+export interface MentorSummary {
+  id: string;
+  name: string;
+  initials: string;
+  jobTitle: string;
+  company: string;
+  years: number;
+  rating: number;
+  sessions: number;
+  availability: string;
+  bio: string;
+  specialisations: string[];
+  languages: string[];
+}
+
+export interface MentorDetail extends MentorSummary {
+  slots: { day: string; times: { time: string; available: boolean; mine: boolean }[] }[];
+}
+
+export interface BookedSession {
+  id: string;
+  mentorId: string;
+  mentorName: string;
+  mentorInitials: string;
+  mentorTitle: string;
+  topic: string;
+  goal: string | null;
+  question: string | null;
+  day: string;
+  time: string;
+  bookedAt: string;
+}

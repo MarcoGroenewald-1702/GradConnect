@@ -119,3 +119,22 @@ export type ApplyInput = z.input<typeof applySchema>;
 export const deleteAccountSchema = z.object({
   password: z.string().min(1, "Please enter your password to confirm."),
 });
+
+// ---------- Assessments ----------
+
+/** The answer index chosen for each question, in order (-1 = skipped). */
+export const submitAssessmentSchema = z.object({
+  answers: z.array(z.number().int().min(-1).max(20)).max(100),
+});
+export type SubmitAssessmentInput = z.input<typeof submitAssessmentSchema>;
+
+// ---------- Mentors ----------
+
+export const bookSessionSchema = z.object({
+  day: z.string().trim().min(1).max(10),
+  time: z.string().trim().regex(/^\d{2}:\d{2}$/, "Please choose a time slot."),
+  topic: z.string().trim().min(1, "Please choose a topic.").max(80),
+  goal: z.string().trim().min(3, "Please describe your goal for the session.").max(200, "Keep the goal under 200 characters."),
+  question: optionalText(1000),
+});
+export type BookSessionInput = z.input<typeof bookSessionSchema>;

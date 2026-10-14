@@ -37,6 +37,7 @@ import { Progress } from "@/components/ui/progress";
 import { Textarea } from "@/components/ui/textarea";
 import { formatDate } from "@/lib/api";
 import { useApply, useDashboard, useProfileSnapshot, useToggleSaved } from "@/lib/queries";
+import { nextSessionLabel } from "@/lib/sessions";
 import { useStore } from "@/lib/store";
 import type { Opportunity } from "@/lib/types";
 
@@ -344,7 +345,7 @@ function DashboardContent() {
                   <li key={s.id} className="rounded-lg border border-border bg-surface p-3">
                     <p className="text-sm font-semibold text-foreground">{s.mentorName}</p>
                     <p className="text-xs text-muted-foreground">
-                      {s.day} {s.time} · {s.topic}
+                      {nextSessionLabel(s.day, s.time)} · {s.topic}
                     </p>
                   </li>
                 ))}

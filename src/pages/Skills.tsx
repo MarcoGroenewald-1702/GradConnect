@@ -1,7 +1,7 @@
 import { useMemo, useState } from "react";
 import { Controller, useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { useNavigate } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import { BadgeCheck, Check, FileCheckCorner, FolderGit2, LoaderCircle, Search, Upload } from "lucide-react";
 import { toast } from "sonner";
 import { projectEvidenceSchema, type ProjectEvidenceInput } from "@shared/schemas";
@@ -14,7 +14,7 @@ import { FieldError } from "@/components/ui/form-error";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { useMySkills, useSkills, useVerifySkill } from "@/lib/queries";
+import { useAssessments, useMySkills, useSkills, useVerifySkill } from "@/lib/queries";
 import { cn } from "@/lib/utils";
 
 const categories = ["All", "Languages", "Frameworks", "Cloud", "Data", "Security", "Tools"];
@@ -25,6 +25,7 @@ function SkillsContent() {
   const skills = useSkills().data ?? [];
   const mySkills = useMySkills().data ?? [];
   const verify = useVerifySkill();
+  const assessments = useAssessments().data ?? [];
 
   const [step, setStep] = useState(0);
   const [query, setQuery] = useState("");
@@ -48,6 +49,7 @@ function SkillsContent() {
     [skills, query, category],
   );
   const selected = skills.find((s) => s.id === selectedId);
+  const assessment = assessments.find((a) => a.skillId === selectedId);
 
   async function confirm(values: ProjectEvidenceInput) {
     if (!selectedId) return;
@@ -176,9 +178,15 @@ function SkillsContent() {
                 <FileCheckCorner className="size-5 text-action" aria-hidden />
                 <h3 className="mt-3 text-base font-semibold text-foreground">Technical Assessment</h3>
                 <p className="mt-1 text-sm text-muted-foreground">Take a timed auto-graded assessment.</p>
-                <p className="mt-2 text-xs text-warning-foreground">
-                  Assessments are coming soon — use project evidence for now.
-                </p>
+                {assessment ? (
+                  <p className="mt-2 text-xs text-muted-foreground">
+                    {assessment.questionCount} questions · {assessment.minutes} minutes · pass mark {assessment.passMark}%
+                  </p>
+                ) : (
+                  <p className="mt-2 text-xs text-warning-foreground">
+                    No assessment for this skill yet — use project evidence.
+                  </p>
+                )}
               </button>
               <button
                 onClick={() => setMethod("project")}
@@ -232,9 +240,15 @@ function SkillsContent() {
                 Back
               </Button>
               {method === "assessment" ? (
-                <Button variant="action" disabled>
-                  Start assessment
-                </Button>
+                assessment ? (
+                  <Button variant="action" asChild>
+                    <Link to={`/assessments/${assessment.id}`}>Start assessment</Link>
+                  </Button>
+                ) : (
+                  <Button variant="action" disabled>
+                    Start assessment
+                  </Button>
+                )
               ) : (
                 <Button
                   variant="action"

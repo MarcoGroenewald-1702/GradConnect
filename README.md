@@ -75,10 +75,19 @@ then create `backend/.env` with `USE_EMBEDDED_DB=false` and your `DATABASE_URL`.
 - **Profile** page with edit, skills, projects, verification history and portfolio links.
 - **POPIA rights:** `GET /api/me/export` (download your data) and `DELETE /api/me` (delete your account).
 - Notifications count on the bell icon.
+- **Assessments** (sprint S4): timed, auto-graded multiple-choice tests (7 skills). Questions are sent without
+  answers and graded on the server; a large timer turns amber at 30 seconds and red at 10 seconds and submits
+  automatically at 00:00. Passing creates a verified SkillsRecord linked to the attempt. Retakes are allowed;
+  correct answers are only revealed once you pass.
+- **Learn** (sprint S5): micro-learning catalogue with lesson notes, track filters and "Recommended" modules
+  (skills you've declared but not verified yet). Marking lessons done updates progress, the activity feed and
+  the readiness score; finishing a module links to the matching assessment.
+- **Mentors** (sprint S6): mentor directory with search and specialisation filters, weekly availability grid,
+  booking form (topic, goal, optional question), "Add to calendar" (.ics) download, and cancelling. A database
+  unique rule stops two graduates booking the same slot.
 
-**Not built yet** (they show the 404 page): Assessments, Learn, Mentors, Opportunities, Applications,
-Notifications and Settings pages, and the employer, mentor and admin dashboards. The database tables for
-assessments, learning modules and mentor sessions already exist with demo data.
+**Not built yet** (they show the 404 page): Opportunities, Applications, Notifications and Settings pages,
+and the employer, mentor and admin dashboards.
 
 From the design that is planned for later phases (section 3.2–3.3): Redis cache/queue, S3/MinIO file storage
 (only the artefact's file name is stored today), background workers, Docker deployment to AWS/Azure.
@@ -131,6 +140,15 @@ From the design that is planned for later phases (section 3.2–3.3): Redis cach
 | POST | `/api/opportunities/:id/apply` | Apply (stores a profile snapshot) |
 | GET | `/api/applications` | My applications |
 | GET | `/api/dashboard` | Everything the dashboard shows |
+| GET | `/api/assessments` | Assessments with my status and best score |
+| POST | `/api/assessments/:id/start` | Start (or resume) a timed attempt; questions without answers |
+| POST | `/api/assessments/attempts/:id/submit` | Submit answers; graded on the server |
+| GET | `/api/learn` · `/api/learn/:id` | Learning modules with my progress |
+| POST | `/api/learn/:id/enrol` | Start a module |
+| POST / DELETE | `/api/learn/:id/lessons/:index/complete` | Mark a lesson done / not done |
+| GET | `/api/mentors` · `/api/mentors/:id` | Mentor directory / one mentor with free slots |
+| POST | `/api/mentors/:id/book` | Book a session |
+| GET | `/api/sessions` · DELETE `/api/sessions/:id` | My sessions / cancel one |
 | GET | `/api/notifications` · `/unread-count` | Notifications |
 | POST | `/api/notifications/read-all` | Mark all as read |
 | GET | `/api/me/export` | POPIA: download all my data |
@@ -155,11 +173,12 @@ shared/schemas.ts            Zod validation used by BOTH frontend and backend
 backend/
   prisma/schema.prisma       data model
   prisma/migrations/         SQL migrations (applied with prisma migrate deploy)
-  prisma/seed.ts             demo data
+  prisma/seed.ts             demo data (catalogue is synced on every start)
+  prisma/catalog-content.ts  lesson notes and extra assessments
   scripts/embedded-db.ts     starts PostgreSQL 16 without installing it
   src/server.ts              starts the API
   src/app.ts                 Express app: security middleware + routes
-  src/routes/                URL -> handler (auth, graduate, common)
+  src/routes/                URL -> handler (auth, graduate, growth = assessments/learn/mentors, common)
   src/services/              business logic (auth, tokens, scoring, profile, skills, opportunities ...)
   src/middleware/            auth (JWT + roles), Zod validation, rate limits, CSRF, errors
   tests/                     Vitest unit tests

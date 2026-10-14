@@ -36,7 +36,7 @@
   "scripts": {
     "postinstall": "prisma generate",
     "db": "tsx scripts/embedded-db.ts",
-    "dev": "tsx scripts/wait-for-db.ts && prisma migrate deploy && tsx prisma/seed.ts && tsx watch src/server.ts",
+    "dev": "tsx scripts/wait-for-db.ts && prisma migrate deploy && prisma generate && tsx prisma/seed.ts && tsx watch src/server.ts",
     "start": "tsx src/server.ts",
     "db:migrate": "prisma migrate deploy",
     "db:seed": "tsx prisma/seed.ts",

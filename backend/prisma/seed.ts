@@ -1,13 +1,19 @@
 /**
- * Fills an empty database with demo data.
- * Run: npm run db:seed   (skips if users already exist; use `npm run db:reset` to start over)
+ * Demo data. Runs every time the API starts (npm run dev):
+ *  1. The catalogue (skills, assessments, learning modules, mentors, opportunities) is always brought up to date,
+ *     so new content reaches existing databases too.
+ *  2. The demo accounts are only added to an empty database (your own accounts and changes are never touched).
+ * Start completely fresh with: npm run db:reset
  * All four demo accounts use the password: password123
  */
 import { hash } from "@node-rs/argon2";
 import { prisma } from "../src/db";
 import type { ApplicationStatus } from "../src/generated/prisma/client";
 import { evidenceHash } from "../src/services/scoring";
-import { assessments, learningModules, mentors, opportunities, skills } from "./seed-data";
+import { extraAssessments, lessonContent } from "./catalog-content";
+import { assessments as baseAssessments, learningModules, mentors, opportunities, skills } from "./seed-data";
+
+const assessments = [...baseAssessments, ...extraAssessments];
 
 const daysAgo = (days: number, hour = 9) => {
   const d = new Date();
@@ -22,30 +28,23 @@ function fromLabel(label: string) {
   return daysAgo(Number(n) * (unit.startsWith("week") ? 7 : 1));
 }
 
-async function main() {
-  if ((await prisma.user.count()) > 0) {
-    console.log("[seed] Database already has data, skipping. (npm run db:reset to start over)");
-    return;
-  }
-  console.log("[seed] Adding demo data...");
-  const passwordHash = await hash("password123");
-  const consent = daysAgo(90);
+/** Lessons with their notes, e.g. [{ title, minutes, content: [...] }] */
+function lessonsFor(moduleId: string, lessons: { title: string; minutes: number }[]) {
+  return lessons.map((l, i) => ({ title: l.title, minutes: l.minutes, content: lessonContent[moduleId]?.[i] ?? [] }));
+}
 
-  // ----- Skills taxonomy, assessments, learning modules -----
-  await prisma.skill.createMany({ data: skills });
+/** Always runs: inserts or updates the catalogue. */
+async function syncCatalogue() {
+  for (const s of skills) {
+    await prisma.skill.upsert({ where: { id: s.id }, update: { name: s.name, category: s.category }, create: s });
+  }
   const skillIdByName = new Map(skills.map((s) => [s.name, s.id]));
-  await prisma.assessment.createMany({
-    data: assessments.map((a) => ({
-      id: a.id,
-      skillId: skillIdByName.get(a.skill)!,
-      title: a.title,
-      minutes: a.minutes,
-      questions: a.questions,
-    })),
-  });
-  await prisma.learningModule.createMany({
-    data: learningModules.map((m) => ({
-      id: m.id,
+  for (const a of assessments) {
+    const data = { skillId: skillIdByName.get(a.skill)!, title: a.title, minutes: a.minutes, questions: a.questions };
+    await prisma.assessment.upsert({ where: { id: a.id }, update: data, create: { id: a.id, ...data } });
+  }
+  for (const m of learningModules) {
+    const data = {
       title: m.title,
       skill: m.skill,
       track: m.track,
@@ -53,9 +52,58 @@ async function main() {
       minutes: m.minutes,
       description: m.description,
       objectives: m.objectives,
-      lessons: m.lessons.map((l) => ({ title: l.title, minutes: l.minutes })),
-    })),
-  });
+      lessons: lessonsFor(m.id, m.lessons),
+    };
+    await prisma.learningModule.upsert({ where: { id: m.id }, update: data, create: { id: m.id, ...data } });
+  }
+  for (const m of mentors) {
+    const data = {
+      name: m.name,
+      initials: m.initials,
+      jobTitle: m.jobTitle,
+      company: m.company,
+      years: m.years,
+      rating: m.rating,
+      availability: m.availability,
+      bio: m.bio,
+      specialisations: m.specialisations,
+      languages: m.languages,
+      slots: m.slots,
+    };
+    await prisma.mentor.upsert({ where: { id: m.id }, update: data, create: { id: m.id, sessionsCount: m.sessions, ...data } });
+  }
+  for (const name of [...new Set(opportunities.map((o) => o.company))]) {
+    await prisma.employer.upsert({ where: { name }, update: {}, create: { name } });
+  }
+  const employers = await prisma.employer.findMany();
+  const employerId = new Map(employers.map((e) => [e.name, e.id]));
+  for (const o of opportunities) {
+    const data = {
+      employerId: employerId.get(o.company)!,
+      title: o.title,
+      type: o.type,
+      location: o.location,
+      workMode: o.workMode,
+      experience: o.experience,
+      salary: o.salary,
+      description: o.description,
+      skills: o.skills,
+      responsibilities: o.responsibilities,
+      requirements: o.requirements,
+    };
+    await prisma.opportunity.upsert({ where: { id: o.id }, update: data, create: { id: o.id, postedAt: fromLabel(o.postedDate), ...data } });
+  }
+}
+
+async function main() {
+  await syncCatalogue();
+  if ((await prisma.user.count()) > 0) {
+    console.log("[seed] Catalogue up to date. Demo accounts already exist, not changing them.");
+    return;
+  }
+  console.log("[seed] Adding demo accounts...");
+  const passwordHash = await hash("password123");
+  const consent = daysAgo(90);
 
   // ----- Demo users -----
   const thandi = await prisma.user.create({
@@ -94,53 +142,9 @@ async function main() {
     data: { email: "admin@gradconnect.example", passwordHash, firstName: "Naledi", lastName: "Khumalo", role: "admin", termsAcceptedAt: consent, popiaConsentAt: consent },
   });
 
-  // ----- Mentors (Sipho's mentor profile is linked to his account) -----
-  for (const m of mentors) {
-    await prisma.mentor.create({
-      data: {
-        id: m.id,
-        userId: m.id === "m-1" ? sipho.id : undefined,
-        name: m.name,
-        initials: m.initials,
-        jobTitle: m.jobTitle,
-        company: m.company,
-        years: m.years,
-        rating: m.rating,
-        sessionsCount: m.sessions,
-        availability: m.availability,
-        bio: m.bio,
-        specialisations: m.specialisations,
-        languages: m.languages,
-        slots: m.slots,
-      },
-    });
-  }
-
-  // ----- Employers and opportunities (TechNova is linked to Lerato's account) -----
-  for (const name of [...new Set(opportunities.map((o) => o.company))]) {
-    await prisma.employer.create({ data: { name, userId: name === "TechNova" ? lerato.id : undefined } });
-  }
-  const employers = await prisma.employer.findMany();
-  const employerId = new Map(employers.map((e) => [e.name, e.id]));
-  for (const o of opportunities) {
-    await prisma.opportunity.create({
-      data: {
-        id: o.id,
-        employerId: employerId.get(o.company)!,
-        title: o.title,
-        type: o.type,
-        location: o.location,
-        workMode: o.workMode,
-        experience: o.experience,
-        salary: o.salary,
-        description: o.description,
-        skills: o.skills,
-        responsibilities: o.responsibilities,
-        requirements: o.requirements,
-        postedAt: fromLabel(o.postedDate),
-      },
-    });
-  }
+  // ----- Link Sipho's account to his mentor profile, and TechNova to Lerato -----
+  await prisma.mentor.update({ where: { id: "m-1" }, data: { userId: sipho.id } });
+  await prisma.employer.update({ where: { name: "TechNova" }, data: { userId: lerato.id } });
 
   // ----- Thandi's skills: 7 declared, 3 of them verified -----
   const profileId = thandi.profile!.id;
@@ -168,8 +172,12 @@ async function main() {
   // ----- Learning progress -----
   await prisma.moduleEnrolment.createMany({
     data: learningModules
-      .filter((m) => m.progress > 0)
-      .map((m) => ({ profileId, moduleId: m.id, progress: m.progress, completedAt: m.progress === 100 ? daysAgo(40) : null })),
+      .filter((m) => m.lessons.some((l) => l.done))
+      .map((m) => {
+        const completedLessons = m.lessons.flatMap((l, i) => (l.done ? [i] : []));
+        const progress = Math.round((completedLessons.length / m.lessons.length) * 100);
+        return { profileId, moduleId: m.id, completedLessons, progress, completedAt: progress === 100 ? daysAgo(40) : null };
+      }),
   });
 
   // ----- Mentor session, applications, activity, notifications -----

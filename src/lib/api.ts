@@ -6,6 +6,8 @@
 //    token expires we call /api/auth/refresh, which rotates the cookie and returns a new access token.
 import type {
   ApplyInput,
+  BookSessionInput,
+  SubmitAssessmentInput,
   LoginInput,
   OnboardingInput,
   ProfileUpdateInput,
@@ -14,6 +16,14 @@ import type {
 } from "@shared/schemas";
 import type {
   Application,
+  AssessmentAttempt,
+  AssessmentResult,
+  AssessmentSummary,
+  BookedSession,
+  MentorDetail,
+  MentorSummary,
+  ModuleDetail,
+  ModuleSummary,
   AuthResponse,
   Dashboard,
   Opportunity,
@@ -136,6 +146,26 @@ export const api = {
   toggleSaved: (id: string) => request<{ saved: boolean }>("POST", `/opportunities/${id}/save`),
   apply: (id: string, input: ApplyInput) => request<Application>("POST", `/opportunities/${id}/apply`, input),
   applications: () => request<Application[]>("GET", "/applications"),
+
+  // Assessments
+  assessments: () => request<AssessmentSummary[]>("GET", "/assessments"),
+  startAssessment: (id: string) => request<AssessmentAttempt>("POST", `/assessments/${id}/start`),
+  submitAssessment: (attemptId: string, input: SubmitAssessmentInput) =>
+    request<AssessmentResult>("POST", `/assessments/attempts/${attemptId}/submit`, input),
+
+  // Learning
+  modules: () => request<ModuleSummary[]>("GET", "/learn"),
+  module: (id: string) => request<ModuleDetail>("GET", `/learn/${id}`),
+  enrol: (id: string) => request<ModuleDetail>("POST", `/learn/${id}/enrol`),
+  setLessonDone: (id: string, index: number, done: boolean) =>
+    request<ModuleDetail>(done ? "POST" : "DELETE", `/learn/${id}/lessons/${index}/complete`),
+
+  // Mentors
+  mentors: () => request<MentorSummary[]>("GET", "/mentors"),
+  mentor: (id: string) => request<MentorDetail>("GET", `/mentors/${id}`),
+  bookSession: (id: string, input: BookSessionInput) => request<BookedSession>("POST", `/mentors/${id}/book`, input),
+  sessions: () => request<BookedSession[]>("GET", "/sessions"),
+  cancelSession: (id: string) => request<void>("DELETE", `/sessions/${id}`),
 
   // Dashboard & notifications
   dashboard: () => request<Dashboard>("GET", "/dashboard"),

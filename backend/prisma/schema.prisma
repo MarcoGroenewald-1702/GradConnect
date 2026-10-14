@@ -61,14 +61,14 @@ model User {
 
 /// Rotating refresh tokens. Only a SHA-256 hash of the token is stored.
 model RefreshToken {
-  id         String    @id @default(uuid())
-  userId     String
-  tokenHash  String    @unique
+  id        String    @id @default(uuid())
+  userId    String
+  tokenHash String    @unique
   /// all tokens created from one login share a family; reuse of an old token revokes the family
-  familyId   String
-  expiresAt  DateTime
-  revokedAt  DateTime?
-  createdAt  DateTime  @default(now())
+  familyId  String
+  expiresAt DateTime
+  revokedAt DateTime?
+  createdAt DateTime  @default(now())
 
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
@@ -186,6 +186,8 @@ model AssessmentAttempt {
   profileId    String
   score        Int?
   passed       Boolean?
+  /// the answer index chosen for each question (-1 = not answered)
+  answers      Json?
   startedAt    DateTime  @default(now())
   submittedAt  DateTime?
 
@@ -198,7 +200,7 @@ model AssessmentAttempt {
 
 /// Micro-learning unit.
 model LearningModule {
-  id          String @id
+  id          String   @id
   title       String
   skill       String
   track       String
@@ -206,19 +208,21 @@ model LearningModule {
   minutes     Int
   description String
   objectives  String[]
-  /// [{ title, minutes }]
+  /// [{ title, minutes, content: string[] }]
   lessons     Json
 
   enrolments ModuleEnrolment[]
 }
 
 model ModuleEnrolment {
-  profileId   String
-  moduleId    String
-  /// 0-100
-  progress    Int       @default(0)
-  enrolledAt  DateTime  @default(now())
-  completedAt DateTime?
+  profileId        String
+  moduleId         String
+  /// 0-100, calculated from completedLessons
+  progress         Int       @default(0)
+  /// positions (0, 1, 2 ...) of the lessons the graduate has finished
+  completedLessons Int[]     @default([])
+  enrolledAt       DateTime  @default(now())
+  completedAt      DateTime?
 
   profile Profile        @relation(fields: [profileId], references: [id], onDelete: Cascade)
   module  LearningModule @relation(fields: [moduleId], references: [id])
@@ -262,6 +266,8 @@ model MentorSession {
   mentor  Mentor  @relation(fields: [mentorId], references: [id])
   profile Profile @relation(fields: [profileId], references: [id], onDelete: Cascade)
 
+  /// a weekly slot can only be booked once
+  @@unique([mentorId, day, time])
   @@index([profileId])
 }
 

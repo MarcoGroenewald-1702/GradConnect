@@ -8,6 +8,7 @@ import { apiRateLimit } from "./middleware/security";
 import { authRouter } from "./routes/auth.routes";
 import { commonRouter } from "./routes/common.routes";
 import { graduateRouter } from "./routes/graduate.routes";
+import { growthRouter } from "./routes/growth.routes";
 
 /** Builds the Express app (kept separate from server.ts so tests can import it). */
 export function createApp() {
@@ -23,6 +24,7 @@ export function createApp() {
 
   app.use("/api/auth", authRouter);
   app.use("/api", commonRouter);
+  app.use("/api", growthRouter);
   app.use("/api", graduateRouter);
 
   app.use(notFoundHandler);
